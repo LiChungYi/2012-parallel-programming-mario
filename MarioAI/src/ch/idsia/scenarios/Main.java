@@ -29,6 +29,7 @@ package ch.idsia.scenarios;
 
 import ch.idsia.benchmark.tasks.BasicTask;
 import ch.idsia.benchmark.tasks.BasicTask2;
+import ch.idsia.benchmark.tasks.BasicTaskClean;
 import ch.idsia.tools.MarioAIOptions;
 
 /**
@@ -39,6 +40,16 @@ public final class Main
 {
 public static void main(String[] args)
 {
+
+    final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
+    final BasicTask basicTask = new BasicTask(marioAIOptions);
+//    final BasicTaskClean basicTask = new BasicTaskClean(marioAIOptions);
+
+    basicTask.setOptionsAndReset(marioAIOptions);
+    basicTask.doEpisodes(1,true,1);
+    System.exit(0);
+	
+    /*
 //        final String argsString = "-vis on";
     final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
 //        final Environment environment = new MarioEnvironment();
@@ -46,6 +57,7 @@ public static void main(String[] args)
 //        final Agent agent = marioAIOptions.getAgent();
 //        final Agent a = AgentsPool.loadAgent("ch.idsia.controllers.agents.controllers.ForwardJumpingAgent");
     final BasicTask basicTask = new BasicTask(marioAIOptions);
+    
 //        for (int i = 0; i < 10; ++i)
 //        {
 //            int seed = 0;
@@ -62,6 +74,7 @@ public static void main(String[] args)
 //        }
 //
     System.exit(0);
+    */
 }
 
 }
