@@ -48,6 +48,7 @@ public static void main(String[] args)
 //    final BasicTaskClean basicTask = new BasicTaskClean(marioAIOptions);
 
     basicTask.setOptionsAndReset(marioAIOptions);
+   // basicTask.doReplay();
     basicTask.doEpisodes(1,true,1);
     System.exit(0);
 	

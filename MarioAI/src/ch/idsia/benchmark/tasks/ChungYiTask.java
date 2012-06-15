@@ -59,15 +59,18 @@ import java.util.Vector;
  */
 
 public class ChungYiTask implements Task{
-	ByteArrayOutputStream bos;	
+	byte[] theByteData;
 	public class EnvironmentGenerator{
 		EnvironmentGenerator(Environment src){
 			try{
+				ByteArrayOutputStream bos;	
 				bos = new ByteArrayOutputStream();
 				ObjectOutputStream oos = new ObjectOutputStream(bos);
 				oos.writeObject(src);
 				oos.flush();
 				oos.close();
+
+				theByteData = bos.toByteArray();
 			}
 			catch(Exception e){
 				e.printStackTrace();
@@ -76,8 +79,9 @@ public class ChungYiTask implements Task{
 		Environment copyEnvironment(){
 			Environment dest = null;
 			try{
-				ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
+				ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(theByteData));
 				dest = (Environment)in.readObject();
+				in.close();
 			}
 			catch(Exception e){
 				e.printStackTrace();
@@ -174,8 +178,6 @@ public void setOptionsAndReset(final String options)
     reset();
 }
 
-public void doReplay(){
-}
 
 
 void dumpPath(Vector<Integer> surePathGivenEnvironment){
@@ -237,6 +239,20 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 			    System.err.println("bug!");
 			    System.exit(0);
 		    }
+
+		    int wantEnvIndex = surePathGivenEnvironment.size();
+		    if(environmentPath.get(wantEnvIndex) == null ){
+			    int notNullIndex = surePathGivenEnvironment.size()-1;
+			    while(environmentPath.get(notNullIndex) == null) --notNullIndex;
+
+			    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.get(notNullIndex));
+			    environmentPath.set(wantEnvIndex, gen.copyEnvironment());
+			    for(int i = notNullIndex; i < wantEnvIndex; ++i){
+				    environmentPath.get(wantEnvIndex).performAction(actionCodeToByteArray(surePathGivenEnvironment.get(i)));
+				    environmentPath.get(wantEnvIndex).tick();
+			    }
+		    }
+
 		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
 		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN){
@@ -280,22 +296,43 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    targetLen += targetLenStep;
 	    for(int i = 0; i < futurePathList.get(0).size(); ++i){
 		    surePathGivenEnvironment.add(futurePathList.get(0).get(i));
-
+		    environmentPath.add(null);
+/*
 		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
 		    Environment nextEnvironment = gen.copyEnvironment();
 		    
 		    boolean[] action = actionCodeToByteArray(surePathGivenEnvironment.lastElement());
 		    nextEnvironment.performAction(action);
 		    nextEnvironment.tick();
-		    environmentPath.add(nextEnvironment);
+		    environmentPath.add(nextEnvironment);*/
 	    }
 	    lastFitness = fitness[0];   
+	    
+	    dumpPath(surePathGivenEnvironment);
     }
 
 
     //EvaluationInfo.numberOfElements
 //	    environment.getEvaluationInfo();
 }
+
+public void doReplay(){
+	List<boolean[]> trace = new ArrayList<boolean[]>();
+	options.setVisualization(true);
+	initEnvironment.reset(options);
+    try{
+    	ObjectInputStream in = new ObjectInputStream(new FileInputStream("ChungYi_marioTrace"));
+    	trace = (List<boolean[]>)in.readObject();
+        for(int i=0;i<trace.size() && !initEnvironment.isLevelFinished();++i){
+        	initEnvironment.performAction(trace.get(i));
+        	initEnvironment.tick();
+        }
+    }catch(Exception e){
+    	e.printStackTrace();
+    }
+}
+
+
 
 public boolean isFinished()
 {
