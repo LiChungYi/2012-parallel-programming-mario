@@ -71,6 +71,7 @@ C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\mario\simulati
 C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\BasicTask.java
 C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\BasicTask2.java
 C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\BasicTaskClean.java
+C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\ChungYiTask.java
 C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\GamePlayTask.java
 C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\LearningTask.java
 C:\Users\chungyi\Desktop\SVN\trunk\MarioAI\src\ch\idsia\benchmark\tasks\MarioCustomSystemOfValues.java
