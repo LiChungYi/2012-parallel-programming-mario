@@ -1,2 +1,0 @@
-from
-http://code.google.com/p/marioai/wiki/GettingStarted#Eclipse_Galileo_for_Java_part_and_entire_source
