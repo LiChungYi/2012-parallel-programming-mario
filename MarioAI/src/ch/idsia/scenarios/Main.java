@@ -30,6 +30,7 @@ package ch.idsia.scenarios;
 import ch.idsia.benchmark.tasks.BasicTask;
 import ch.idsia.benchmark.tasks.BasicTask2;
 import ch.idsia.benchmark.tasks.BasicTaskClean;
+import ch.idsia.benchmark.tasks.ChungYiTask;
 import ch.idsia.tools.MarioAIOptions;
 
 /**
@@ -42,7 +43,8 @@ public static void main(String[] args)
 {
 
     final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
-    final BasicTask basicTask = new BasicTask(marioAIOptions);
+//    final BasicTask basicTask = new BasicTask(marioAIOptions);
+    final ChungYiTask basicTask = new ChungYiTask(marioAIOptions);
 //    final BasicTaskClean basicTask = new BasicTaskClean(marioAIOptions);
 
     basicTask.setOptionsAndReset(marioAIOptions);
