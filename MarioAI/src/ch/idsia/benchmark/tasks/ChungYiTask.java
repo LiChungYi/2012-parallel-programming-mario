@@ -127,20 +127,55 @@ boolean[] actionCodeToByteArray(Integer actionCode){
  * @param repetitionsOfSingleEpisode
  * @return boolean flag whether controller is disqualified or not
  */
-public EvaluationInfo runSingleEpisode(Environment environment, final Vector<Integer> actionCodeList, Random r, final int length)
+    class OperationCode{
+    	int jumpOp, speedOp, rightOp;
+	OperationCode(){
+		jumpOp = -1;	//0, 1: short jump, 2: long jump
+		speedOp = -1;	//0, 1
+		rightOp = -1;	//0, 1
+	}
+	void next(Random r){
+		if(jumpOp == -1)
+			jumpOp = r.nextInt(3);
+		if(speedOp == -1)
+			speedOp = r.nextInt(2);
+		if(rightOp == -1)
+			rightOp = r.nextInt(2);
+	}
+	boolean[] getAction(Environment environment){
+		boolean[] action = new boolean[Environment.numberOfKeys];
+
+		if(jumpOp > 0){
+			action[Mario.KEY_JUMP] = true;
+		}
+		if(speedOp > 0){
+			action[Mario.KEY_SPEED] = true;
+		}
+		if(rightOp > 0){
+			action[Mario.KEY_RIGHT] = true;
+		}
+		if(jumpOp != 2)
+			jumpOp = -1;
+		if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
+			jumpOp = -1;
+		speedOp = -1;
+		rightOp = -1;
+		return action;
+	}
+    }
+
+public EvaluationInfo runSingleEpisode(Environment environment, final Vector<boolean[]> aFuturePath, Random r, final int length)
 {
     //long c = System.currentTimeMillis();
 
-    int count = 0;
+    OperationCode operationCode = new OperationCode();
+    aFuturePath.clear();
     while (!environment.isLevelFinished())
     {
-	    int actionCode;
-	    if(count >= actionCodeList.size())
-		    actionCodeList.add(r.nextInt(3));
-	    actionCode = actionCodeList.get(count);
-	    boolean[] action = actionCodeToByteArray(actionCode);
-	    ++count;
-
+	    operationCode.next(r);
+	    boolean[] action = operationCode.getAction(environment); 
+//	    System.err.println("JUMP " + action[Mario.KEY_JUMP] + ", SPEED " + action[Mario.KEY_SPEED] + ", RIGHT " + action[Mario.KEY_RIGHT]);
+	    aFuturePath.add(action);
             environment.performAction(action);
 	    environment.tick();
 
@@ -149,7 +184,7 @@ public EvaluationInfo runSingleEpisode(Environment environment, final Vector<Int
     }
 
 
-//    environment.closeRecorder(); //recorder initialized in environment.reset
+    environment.closeRecorder(); //recorder initialized in environment.reset
 //    environment.getEvaluationInfo().setTaskName(name);
 //    this.evaluationInfo = environment.getEvaluationInfo().clone();
 
@@ -180,11 +215,11 @@ public void setOptionsAndReset(final String options)
 
 
 
-void dumpPath(Vector<Integer> surePathGivenEnvironment){
+void dumpPath(Vector<boolean[]> surePathGivenEnvironment){
 	//output trace
 	List<boolean[]> trace = new ArrayList();
 	for(int i = 0; i < surePathGivenEnvironment.size(); ++i)
-		trace.add(actionCodeToByteArray(surePathGivenEnvironment.get(i)));
+		trace.add(surePathGivenEnvironment.get(i));
 
 	try{
 		FileOutputStream fos = new FileOutputStream("output");
@@ -201,17 +236,18 @@ void dumpPath(Vector<Integer> surePathGivenEnvironment){
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {
 
-    int nSolution = 200, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
+    int nSolution = 100, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
     int backTrack_nOperation = 15;
 
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
     Vector<Environment> environmentPath = new Vector<Environment>();
-    Vector<Integer> surePathGivenEnvironment = new Vector<Integer>();
-    Vector<Vector<Integer> > futurePathList = new Vector<Vector<Integer> >();
+    Vector<boolean[]> surePathGivenEnvironment = new Vector<boolean[]>();
+    Vector<Vector<boolean[]> > futurePathList = new Vector<Vector<boolean[]> >();
     int[] fitness = new int[nSolution];
     Random random = new Random(0);
     for(int i = 0; i < nSolution; ++i)
-    	futurePathList.add(new Vector<Integer>());
+    	futurePathList.add(new Vector<boolean[]>());
+    initEnvironment.tick();				//the convension is "a tick first then (perform+tick)*"
     environmentPath.add(initEnvironment);
 
     int lastFitness = Integer.MAX_VALUE;
@@ -220,13 +256,13 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    int foundSol = 0, foundAcceptableSol = 0;
 	    int stuck = 0;
 	    while(foundSol != nSolution && foundAcceptableSol != nSolutionForAcceptableDecrease){
-		    if(iter > 400 && stuck == 0){//if stuck do not backTrack again
+		    if(iter > 300 && stuck == 0){//if stuck do not backTrack again
 			stuck = 1;
 			int newSize = surePathGivenEnvironment.size()-backTrack_nOperation;
 			newSize = newSize >= 0? newSize: 0;
 		 	surePathGivenEnvironment.setSize(newSize); 
 			environmentPath.setSize(newSize+1);		//initEnvironment will always be kept
-			iter -= 400;
+			iter -= 300;
 		    }
 
 		    System.out.println("iter" + iter);
@@ -234,9 +270,6 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 
 	    	    for(int i = 0; i < nSolution; ++i)
 			fitness[i] = 0;
-		    
-//		    if(foundSol >= futurePathList.size())
-//			    futurePathList.add(new Vector<Integer>());
 		    
 		    if(surePathGivenEnvironment.size() != environmentPath.size()-1){
 			    System.err.println("bug!");
@@ -251,19 +284,18 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 			    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.get(notNullIndex));
 			    environmentPath.set(wantEnvIndex, gen.copyEnvironment());
 			    for(int i = notNullIndex; i < wantEnvIndex; ++i){
-				    environmentPath.get(wantEnvIndex).performAction(actionCodeToByteArray(surePathGivenEnvironment.get(i)));
+				    environmentPath.get(wantEnvIndex).performAction(surePathGivenEnvironment.get(i));
 				    environmentPath.get(wantEnvIndex).tick();
 			    }
 		    }
 
 		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
-		    if(wantEnvIndex != 0)
-		    	environmentPath.set(wantEnvIndex, null);
+	
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
 		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN){
-	    			for(int i = 0; i < futurePathList.get(foundSol).size(); ++i){
-		    			surePathGivenEnvironment.add(futurePathList.get(foundSol).get(i));
-				}
+			    for(int i = 0; i < futurePathList.get(foundSol).size(); ++i){
+				    surePathGivenEnvironment.add(futurePathList.get(foundSol).get(i));
+			    }
 			    System.err.println("succeed! + marioMode: " + evaluationInfo.marioMode);
 			    dumpPath(surePathGivenEnvironment);
 			return;
@@ -295,7 +327,7 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    for(int j = i + 1; j < futurePathList.size(); ++j){
 		    	if(fitness[i] < fitness[j]){
 				int tmp = fitness[i]; fitness[i] = fitness[j]; fitness[j] = tmp;
-				Vector<Integer> tmpV = futurePathList.get(i); 
+				Vector<boolean[]> tmpV = futurePathList.get(i); 
 				futurePathList.set(i, futurePathList.get(j));
 				futurePathList.set(j, tmpV);
 			}
@@ -305,14 +337,6 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    for(int i = 0; i < futurePathList.get(0).size(); ++i){
 		    surePathGivenEnvironment.add(futurePathList.get(0).get(i));
 		    environmentPath.add(null);
-/*
-		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
-		    Environment nextEnvironment = gen.copyEnvironment();
-		    
-		    boolean[] action = actionCodeToByteArray(surePathGivenEnvironment.lastElement());
-		    nextEnvironment.performAction(action);
-		    nextEnvironment.tick();
-		    environmentPath.add(nextEnvironment);*/
 	    }
 	    lastFitness = fitness[0];   
 	    
