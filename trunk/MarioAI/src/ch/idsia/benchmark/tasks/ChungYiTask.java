@@ -59,8 +59,8 @@ import java.util.Vector;
  */
 
 public class ChungYiTask implements Task{
-	byte[] theByteData;
 	public class EnvironmentGenerator{
+		byte[] theByteData;
 		EnvironmentGenerator(Environment src){
 			try{
 				ByteArrayOutputStream bos;	
