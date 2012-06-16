@@ -65,7 +65,7 @@ public void move()
     else
         xPic = xPicStart + (10 - life) * 4 / 10;
 
-    if (life-- < 0) Sprite.spriteContext.removeSprite(this);
+    if (life-- < 0) spriteContext.removeSprite(this);
 
     x += xa;
     y += ya;

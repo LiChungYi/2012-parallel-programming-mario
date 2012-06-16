@@ -328,6 +328,7 @@ public void tick()
 
 public void addSprite(Sprite sprite)
 {
+	sprite.spriteContext = this;
     spritesToAdd.add(sprite);
     sprite.tick();
 }
@@ -576,8 +577,7 @@ public void reset(MarioAIOptions marioAIOptions)
     this.levelHeight = level.height;
     this.levelType = level.type;
     this.levelDifficulty = level.difficulty;
-
-    Sprite.spriteContext = this;
+    
     sprites.clear();
     this.width = GlobalOptions.VISUAL_COMPONENT_WIDTH;
     this.height = GlobalOptions.VISUAL_COMPONENT_HEIGHT;
@@ -591,7 +591,7 @@ public void reset(MarioAIOptions marioAIOptions)
 
     mario = new Mario(this, marioAIOptions);
 
-    //System.out.println("mario = " + mario);
+    //System.out.println("mario = " + mario);static 
     memo = "";
 
     sprites.add(mario);

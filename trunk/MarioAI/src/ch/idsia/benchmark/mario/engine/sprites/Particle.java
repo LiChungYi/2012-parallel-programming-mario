@@ -58,7 +58,7 @@ public Particle(int x, int y, float xa, float ya, int xPic, int yPic)
 
 public void move()
 {
-    if (life-- < 0) Sprite.spriteContext.removeSprite(this);
+    if (life-- < 0) spriteContext.removeSprite(this);
     x += xa;
     y += ya;
     ya *= 0.95f;
