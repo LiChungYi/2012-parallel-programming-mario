@@ -200,8 +200,9 @@ void dumpPath(Vector<Integer> surePathGivenEnvironment){
 
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {
-    int nSolution = 50, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 0, nSolutionForAcceptableDecrease = 5;
-    int backTrack_nOperation = 10;
+
+    int nSolution = 200, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
+    int backTrack_nOperation = 15;
 
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
     Vector<Environment> environmentPath = new Vector<Environment>();
@@ -217,13 +218,15 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
     while(true){
 	    int iter = 0;
 	    int foundSol = 0, foundAcceptableSol = 0;
+	    int stuck = 0;
 	    while(foundSol != nSolution && foundAcceptableSol != nSolutionForAcceptableDecrease){
-		    if(iter > 100){
+		    if(iter > 400 && stuck == 0){//if stuck do not backTrack again
+			stuck = 1;
 			int newSize = surePathGivenEnvironment.size()-backTrack_nOperation;
 			newSize = newSize >= 0? newSize: 0;
 		 	surePathGivenEnvironment.setSize(newSize); 
 			environmentPath.setSize(newSize+1);		//initEnvironment will always be kept
-			iter -= 100;
+			iter -= 400;
 		    }
 
 		    System.out.println("iter" + iter);
