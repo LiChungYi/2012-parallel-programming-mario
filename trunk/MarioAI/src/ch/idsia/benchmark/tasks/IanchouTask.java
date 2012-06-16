@@ -58,7 +58,6 @@ public class IanchouTask implements Task
 protected Environment environment;
 private Agent agent;
 protected MarioAIOptions options;
-private long COMPUTATION_TIME_BOUND = 42; // stands for prescribed  FPS 24.
 private String name = getClass().getSimpleName();
 private EvaluationInfo evaluationInfo;
 
@@ -71,33 +70,7 @@ public IanchouTask(MarioAIOptions marioAIOptions)
     this.setOptionsAndReset(marioAIOptions);
 }
 
-private boolean check(List<boolean[]> trace, List<Environment> env, int n){
-
-	environment = copyEnvironment(env.get(n));
-    for(int i=n;i<trace.size() && environment.getMarioStatus() != Mario.STATUS_DEAD;++i){
-    	environment.performAction(trace.get(i));
-    	environment.tick();
-    	if(i+1 < env.size())
-    		env.set(i+1, copyEnvironment(environment));
-    }
-    return environment.getMarioStatus() != Mario.STATUS_DEAD;
-}
-
-private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int n){ 
-	System.out.println(n);
-	if(trace.get(n-1)[Mario.KEY_JUMP]){
-		for(int i=n;i<trace.size();++i)
-			trace.get(n-1)[Mario.KEY_JUMP] = false;
-		return dfs(trace, env, n-1);
-	}
-	trace.get(n-1)[Mario.KEY_JUMP] = true;
-	if(check(trace, env, n-1))
-		return trace;
-	else
-		return dfs(trace, env, n);
-}
-
-Environment copyEnvironment(Environment src){
+Environment copy(Environment src){
 	Environment dest = null;
     try{
     	ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -113,6 +86,73 @@ Environment copyEnvironment(Environment src){
     return dest;
 }
 
+private boolean check(List<boolean[]> trace, List<Environment> env, int x){
+	environment = copy(env.get(x));
+    for(int i=x;i<trace.size() && environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode()==2;++i){
+    	environment.performAction(trace.get(i));
+    	environment.tick();
+    	if(i+1 < env.size())
+    		env.set(i+1, copy(environment));
+    }
+    return environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode() == 2;
+}
+
+private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int x){
+	System.err.println(environment.getMarioFloatPos()[0] + " " + x);
+	if(!trace.get(x)[Mario.KEY_JUMP]){
+		if(x == trace.size()-1){
+			int p;
+			for(p=x-1;p>=0;--p){
+				if(trace.get(p)[Mario.KEY_JUMP])
+					break;
+			}
+			trace.get(p)[Mario.KEY_JUMP] = false;
+			for(int i=p+1;i<trace.size();++i)
+				trace.get(i)[Mario.KEY_JUMP] = true;
+			environment = copy(env.get(p));
+			if(check(trace, env, p)){
+				return trace;
+			}else{
+				environment = copy(env.get(p+1));
+				return dfs(trace, env, p+1);
+			}
+		}else{
+			environment = copy(env.get(x+1));
+			return dfs(trace, env, x+1);
+		}
+	}else{
+		trace.get(x)[Mario.KEY_JUMP] = false;
+		if(check(trace, env, x)){	
+			return trace;
+		}
+		else{
+			environment = copy(env.get(x));
+			return dfs(trace, env, x);
+		}
+	}
+}
+
+
+/*
+private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int x){ 
+	System.out.println(x);
+	if(trace.get(x)[Mario.KEY_JUMP]){
+		trace.get(x)[Mario.KEY_JUMP] = false;
+		if(check(trace, env, x))
+			return trace;
+		else
+			return dfs(trace, env, x-1);
+	}else if(env.get(x).isMarioAbleToJump()){
+		trace.get(x)[Mario.KEY_JUMP] = true;
+		if(check(trace, env, x))
+			return trace;
+		else
+			return dfs(trace, env, x-1);
+	}else{
+		return dfs(trace, env, x-1);
+	}
+}
+*/
 
 /**
  * @param repetitionsOfSingleEpisode
@@ -122,36 +162,30 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 {
 	List<boolean[]> trace = new ArrayList<boolean[]>();
 	List<Environment> env = new ArrayList<Environment>();
-    long c = System.currentTimeMillis();
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
         this.reset();
         while (!environment.isLevelFinished())
         {
             environment.tick();
-            env.add(copyEnvironment(environment));
+            if(environment.getMarioMode()<2 || environment.getMarioStatus() == Mario.STATUS_DEAD){    	
+            	environment = copy(env.get(env.size()-1));
+            	trace = dfs(trace, env, trace.size()-1);
+            }
+            
+
+            env.add(copy(environment));
             if (!GlobalOptions.isGameplayStopped)
             {
-                c = System.currentTimeMillis();
                 agent.integrateObservation(environment);
                 agent.giveIntermediateReward(environment.getIntermediateReward());
 
                 boolean[] action = agent.getAction().clone();
                 
                 trace.add(action);
-                if (System.currentTimeMillis() - c > COMPUTATION_TIME_BOUND)
-                    return false;
 //                System.out.println("action = " + Arrays.toString(action));
 //            environment.setRecording(GlobalOptions.isRecording);
                 environment.performAction(action);
-                
-                if(environment.getMarioStatus() == Mario.STATUS_DEAD){
-                	trace = dfs(trace, env,trace.size());
-                	environment = copyEnvironment(env.get(env.size()-1));
-                	environment.performAction(trace.get(trace.size()-1));
-                	System.out.println("DFS done:" + environment.getMarioFloatPos()[0]);
-                }
-                
             }
         }
         //options.setVisualization(true);

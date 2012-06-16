@@ -344,7 +344,7 @@ public void bump(int x, int y, boolean canBreakBricks)
     if ((Level.TILE_BEHAVIORS[block & 0xff] & Level.BIT_BUMPABLE) > 0)
     {
         if (block == 1)
-            Mario.gainHiddenBlock();
+            mario.gainHiddenBlock();
         bumpInto(x, y - 1);
         byte blockData = level.getBlockData(x, y);
         if (blockData < 0)
@@ -364,7 +364,7 @@ public void bump(int x, int y, boolean canBreakBricks)
                 ++level.counters.greenMushrooms;
             } else
             {
-                if (!Mario.large)
+                if (!mario.large)
                 {
                     addSprite(new Mushroom(this, x * cellSize + 8, y * cellSize + 8));
                     ++level.counters.mushrooms;
@@ -376,7 +376,7 @@ public void bump(int x, int y, boolean canBreakBricks)
             }
         } else
         {
-            Mario.gainCoin();
+            mario.gainCoin();
             addSprite(new CoinAnim(x, y));
         }
     }
@@ -402,7 +402,7 @@ public void bumpInto(int x, int y)
     byte block = level.getBlock(x, y);
     if (((Level.TILE_BEHAVIORS[block & 0xff]) & Level.BIT_PICKUPABLE) > 0)
     {
-        Mario.gainCoin();
+        mario.gainCoin();
         level.setBlock(x, y, (byte) 0);
         addSprite(new CoinAnim(x, y + 1));
     }
@@ -585,11 +585,12 @@ public void reset(MarioAIOptions marioAIOptions)
     Sprite.setCreaturesGravity(marioAIOptions.getCreaturesGravity());
     Sprite.setCreaturesWind(marioAIOptions.getWind());
     Sprite.setCreaturesIce(marioAIOptions.getIce());
-    Mario.resetStatic(marioAIOptions);
+    
 
     bonusPoints = -1;
 
-    mario = new Mario(this);
+    mario = new Mario(this, marioAIOptions);
+
     //System.out.println("mario = " + mario);
     memo = "";
 

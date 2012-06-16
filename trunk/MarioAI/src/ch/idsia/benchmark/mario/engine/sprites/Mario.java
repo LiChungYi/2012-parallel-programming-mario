@@ -51,20 +51,20 @@ public static final int STATUS_RUNNING = 2;
 public static final int STATUS_WIN = 1;
 public static final int STATUS_DEAD = 0;
 
-private static float marioGravity;
+private float marioGravity;
 
-public static boolean large = false;
-public static boolean fire = false;
-public static int coins = 0;
-public static int hiddenBlocksFound = 0;
-public static int collisionsWithCreatures = 0;
-public static int mushroomsDevoured = 0;
-public static int greenMushroomsDevoured = 0;
-public static int flowersDevoured = 0;
+public boolean large = false;
+public boolean fire = false;
+public int coins = 0;
+public int hiddenBlocksFound = 0;
+public int collisionsWithCreatures = 0;
+public int mushroomsDevoured = 0;
+public int greenMushroomsDevoured = 0;
+public int flowersDevoured = 0;
 
-private static boolean isTrace;
+private boolean isTrace;
 
-private static boolean isMarioInvulnerable;
+private boolean isMarioInvulnerable;
 
 private int status = STATUS_RUNNING;
 // for racoon when carrying the shell
@@ -76,14 +76,14 @@ private int prevHPic;
 private boolean isRacoon;
 private float yaa = 1;
 
-private static float windCoeff = 0f;
-private static float iceCoeff = 0f;
-private static float jumpPower;
+private float windCoeff = 0f;
+private float iceCoeff = 0f;
+private float jumpPower;
 private boolean inLadderZone;
 private boolean onLadder;
 private boolean onTopOfLadder = false;
 
-public static void resetStatic(MarioAIOptions marioAIOptions)
+public void resetStatic(MarioAIOptions marioAIOptions)
 {
     large = marioAIOptions.getMarioMode() > 0;
     fire = marioAIOptions.getMarioMode() == 2;
@@ -129,7 +129,7 @@ private boolean ableToShoot = false;
 int width = 4;
 int height = 24;
 
-private static LevelScene levelScene;
+private LevelScene levelScene;
 public int facing;
 
 public int xDeathPos, yDeathPos;
@@ -141,8 +141,10 @@ private int invulnerableTime = 0;
 public Sprite carried = null;
 //    private static Mario instance;
 
-public Mario(LevelScene levelScene)
+public Mario(LevelScene levelScene, MarioAIOptions marioAIOptions)
 {
+	resetStatic(marioAIOptions);
+
     kind = KIND_MARIO;
 //        Mario.instance = this;
     this.levelScene = levelScene;
@@ -152,7 +154,7 @@ public Mario(LevelScene levelScene)
     mapY = (int) (y / 16);
 
     facing = 1;
-    setMode(Mario.large, Mario.fire);
+    setMode(large, fire);
     yaa = marioGravity * 3;
     jT = jumpPower / (marioGravity);
 }
@@ -165,8 +167,8 @@ private boolean newFire;
 
 private void blink(boolean on)
 {
-    Mario.large = on ? newLarge : lastLarge;
-    Mario.fire = on ? newFire : lastFire;
+    large = on ? newLarge : lastLarge;
+    fire = on ? newFire : lastFire;
 
 //        System.out.println("on = " + on);
     if (large)
@@ -196,14 +198,14 @@ void setMode(boolean large, boolean fire)
     if (fire) large = true;
     if (!large) fire = false;
 
-    lastLarge = Mario.large;
-    lastFire = Mario.fire;
+    lastLarge = large;
+    lastFire = fire;
 
-    Mario.large = large;
-    Mario.fire = fire;
+    large = large;
+    fire = fire;
 
-    newLarge = Mario.large;
-    newFire = Mario.fire;
+    newLarge = large;
+    newFire = fire;
 
     blink(true);
 }
@@ -395,12 +397,12 @@ public void move()
         sliding = false;
     }
 
-    if (keys[KEY_SPEED] && ableToShoot && Mario.fire && levelScene.fireballsOnScreen < 2)
+    if (keys[KEY_SPEED] && ableToShoot && fire && levelScene.fireballsOnScreen < 2)
     {
         levelScene.addSprite(new Fireball(levelScene, x + facing * 6, y - 20, facing));
     }
     // Cheats:
-    if (GlobalOptions.isPowerRestoration && keys[KEY_SPEED] && (!Mario.large || !Mario.fire))
+    if (GlobalOptions.isPowerRestoration && keys[KEY_SPEED] && (!large || !fire))
         setMode(true, true);
 //        if (cheatKeys[KEY_LIFE_UP])
 //            this.lives++;
@@ -654,7 +656,7 @@ private boolean isBlocking(final float _x, final float _y, final float xa, final
 
     if (((Level.TILE_BEHAVIORS[block & 0xff]) & Level.BIT_PICKUPABLE) > 0)
     {
-        Mario.gainCoin();
+        gainCoin();
         levelScene.level.setBlock(x, y, (byte) 0);
         for (int xx = 0; xx < 2; xx++)
             for (int yy = 0; yy < 2; yy++)
@@ -767,7 +769,7 @@ public void devourFlower()
         levelScene.mario.setMode(true, true);
     } else
     {
-        Mario.gainCoin();
+        gainCoin();
     }
     ++flowersDevoured;
     levelScene.appendBonusPoints(MarioEnvironment.IntermediateRewardsSystemOfValues.flowerFire);
@@ -782,7 +784,7 @@ public void devourMushroom()
         levelScene.mario.setMode(true, false);
     } else
     {
-        Mario.gainCoin();
+        gainCoin();
     }
     ++mushroomsDevoured;
     levelScene.appendBonusPoints(MarioEnvironment.IntermediateRewardsSystemOfValues.mushroom);
@@ -832,7 +834,7 @@ public void stomp(final BulletBill bill)
     levelScene.appendBonusPoints(MarioEnvironment.IntermediateRewardsSystemOfValues.stomp);
 }
 
-public static void gainCoin()
+public void gainCoin()
 {
     coins++;
     levelScene.appendBonusPoints(MarioEnvironment.IntermediateRewardsSystemOfValues.coins);
@@ -840,7 +842,7 @@ public static void gainCoin()
 //            get1Up();
 }
 
-public static void gainHiddenBlock()
+public void gainHiddenBlock()
 {
     ++hiddenBlocksFound;
     levelScene.appendBonusPoints(MarioEnvironment.IntermediateRewardsSystemOfValues.hiddenBlock);
