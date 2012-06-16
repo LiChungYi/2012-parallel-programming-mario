@@ -58,7 +58,7 @@ import java.util.Vector;
  * Date: Mar 14, 2010 Time: 4:47:33 PM
  */
 
-public class ChungYiTask implements Task{
+public class ChungYiTask extends BasicTask{
 	byte[] theByteData;
 	public class EnvironmentGenerator{
 		EnvironmentGenerator(Environment src){
