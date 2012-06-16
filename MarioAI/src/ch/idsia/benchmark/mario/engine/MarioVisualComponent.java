@@ -293,11 +293,11 @@ public void render(Graphics g)
     drawStringDropShadow(g, "by Shell : " + marioEnvironment.getKilledCreaturesByShell(), 19, 2, 1);
     // COINS:
     g.drawImage(Art.level[0][2], 2, 43, 10, 10, null);
-    drawStringDropShadow(g, "x" + df.format(Mario.coins), 1, 5, 4);
+    drawStringDropShadow(g, "x" + df.format(mario.coins), 1, 5, 4);
     g.drawImage(Art.items[0][0], 47, 43, 11, 11, null);
-    drawStringDropShadow(g, "x" + df.format(Mario.mushroomsDevoured), 7, 5, 4);
+    drawStringDropShadow(g, "x" + df.format(mario.mushroomsDevoured), 7, 5, 4);
     g.drawImage(Art.items[1][0], 89, 43, 11, 11, null);
-    drawStringDropShadow(g, "x" + df.format(Mario.flowersDevoured), 12, 5, 4);
+    drawStringDropShadow(g, "x" + df.format(mario.flowersDevoured), 12, 5, 4);
 //    drawStringDropShadow(g, "MUSHROOMS: " + df.format(Mario.mushroomsDevoured), 0, 5, 4);
     drawStringDropShadow(g, "by Stomp : " + marioEnvironment.getKilledCreaturesByStomp(), 19, 3, 1);
 //    drawStringDropShadow(g, "FLOWERS  : " + df.format(Mario.flowersDevoured), 0, 6, 4);
