@@ -62,7 +62,8 @@ public static final int KIND_FIREBALL = 25;
 
 public static final int KIND_UNDEF = -42;
 
-public static SpriteContext spriteContext;
+//public static SpriteContext spriteContext;
+public SpriteContext spriteContext;
 public byte kind = KIND_UNDEF;
 
 protected static float GROUND_INERTIA = 0.89f;
