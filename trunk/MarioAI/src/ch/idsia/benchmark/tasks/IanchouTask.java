@@ -60,13 +60,17 @@ private Agent agent;
 protected MarioAIOptions options;
 private String name = getClass().getSimpleName();
 private EvaluationInfo evaluationInfo;
+boolean vis;
 
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 
 public IanchouTask(MarioAIOptions marioAIOptions)
 {
 	environment = new MarioEnvironment();
+	vis = marioAIOptions.getParameterValue("-vis").equals("on");
 	marioAIOptions.setVisualization(false); //can't be true...
+	if(marioAIOptions.getParameterValue("-ag").equals("ch.idsia.agents.controllers.human.HumanKeyboardAgent"));
+		marioAIOptions.setParameterValue("-ag", "ch.idsia.agents.controllers.ForwardAgent");
     this.setOptionsAndReset(marioAIOptions);
 }
 
@@ -194,11 +198,13 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
         //environment = copyEnvironment(environment);
  
         //replay
-        options.setVisualization(true);
-    	environment.reset(options);
-    	for(int i=0;i<trace.size() && !environment.isLevelFinished();++i){
-        	environment.tick();
-        	environment.performAction(trace.get(i));
+        if(vis){
+        	options.setVisualization(vis);
+        	environment.reset(options);
+        	for(int i=0;i<trace.size() && !environment.isLevelFinished();++i){
+        		environment.tick();
+        		environment.performAction(trace.get(i));
+        	}
         }
 
         //output trace
