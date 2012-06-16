@@ -31,6 +31,7 @@ import ch.idsia.benchmark.tasks.BasicTask;
 import ch.idsia.benchmark.tasks.BasicTask2;
 import ch.idsia.benchmark.tasks.BasicTaskClean;
 import ch.idsia.benchmark.tasks.ChungYiTask;
+import ch.idsia.benchmark.tasks.IanchouTask;
 import ch.idsia.tools.MarioAIOptions;
 
 /**
@@ -43,8 +44,15 @@ public static void main(String[] args)
 {
 
     final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
-//    final BasicTask basicTask = new BasicTask(marioAIOptions);
-    final ChungYiTask basicTask = new ChungYiTask(marioAIOptions);
+    
+    final BasicTask basicTask;
+    if(marioAIOptions.getTask().equals("ChungYi"))
+    	basicTask = new ChungYiTask(marioAIOptions);
+    else if(marioAIOptions.getTask().equals("ianchou"))
+    	basicTask = new IanchouTask(marioAIOptions);
+    else 
+    	basicTask = new BasicTask(marioAIOptions);
+     
 //    final BasicTaskClean basicTask = new BasicTaskClean(marioAIOptions);
 
     basicTask.setOptionsAndReset(marioAIOptions);

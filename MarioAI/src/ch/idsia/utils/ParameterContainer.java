@@ -88,6 +88,7 @@ private static final String[] allowed = new String[]{
         "-rfh", // receptive field height (observation )
         "-rfw", // receptive field length (observation )
         "-srf", // show receptive field  (observation )
+        "-task", // Task, by ianchou 
         "-tc",   // TODO description
         "-tl",   // time limit <int>
         "-trace",// TODO description
@@ -258,6 +259,7 @@ public static void InitDefaults()
         defaultOptionsHashMap.put("-rfw", "19");
         defaultOptionsHashMap.put("-srf", "off");
 //            defaultOptionsHashMap.put("-t", "on"); //defaultOptionsHashMap.put("-timer","on");
+        defaultOptionsHashMap.put("-task", "basic"); //Time Limit
         defaultOptionsHashMap.put("-tl", "200"); //Time Limit
         defaultOptionsHashMap.put("-tc", "off"); //defaultOptionsHashMap.put("-toolsConfigurator","off");
         defaultOptionsHashMap.put("-trace", "off"); // Trace Mario path through the level, output to std and default file

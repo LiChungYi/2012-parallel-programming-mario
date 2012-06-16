@@ -29,6 +29,7 @@ package ch.idsia.benchmark.tasks;
 
 import ch.idsia.agents.Agent;
 import ch.idsia.benchmark.mario.engine.GlobalOptions;
+import ch.idsia.benchmark.mario.engine.sprites.Mario;
 import ch.idsia.benchmark.mario.environments.Environment;
 import ch.idsia.benchmark.mario.environments.MarioEnvironment;
 import ch.idsia.tools.EvaluationInfo;
@@ -36,6 +37,14 @@ import ch.idsia.tools.MarioAIOptions;
 import ch.idsia.tools.punj.PunctualJudge;
 import ch.idsia.utils.statistics.StatisticalSummary;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 
 /**
@@ -45,7 +54,7 @@ import java.util.Vector;
  * Date: Mar 14, 2010 Time: 4:47:33 PM
  */
 
-public class BasicTask implements Task
+public class IanchouTask extends BasicTask
 {
 protected Environment environment;
 private Agent agent;
@@ -56,14 +65,55 @@ private EvaluationInfo evaluationInfo;
 
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 
-public BasicTask(){
-}
-
-public BasicTask(MarioAIOptions marioAIOptions)
+public IanchouTask(MarioAIOptions marioAIOptions)
 {
 	environment = new MarioEnvironment();
+	marioAIOptions.setVisualization(false); //can't be true...
     this.setOptionsAndReset(marioAIOptions);
 }
+
+private boolean check(List<boolean[]> trace, List<Environment> env, int n){
+
+	environment = copyEnvironment(env.get(n));
+    for(int i=n;i<trace.size() && environment.getMarioStatus() != Mario.STATUS_DEAD;++i){
+    	environment.performAction(trace.get(i));
+    	environment.tick();
+    	if(i+1 < env.size())
+    		env.set(i+1, copyEnvironment(environment));
+    }
+    return environment.getMarioStatus() != Mario.STATUS_DEAD;
+}
+
+private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int n){ 
+	System.out.println(n);
+	if(trace.get(n-1)[Mario.KEY_JUMP]){
+		for(int i=n;i<trace.size();++i)
+			trace.get(n-1)[Mario.KEY_JUMP] = false;
+		return dfs(trace, env, n-1);
+	}
+	trace.get(n-1)[Mario.KEY_JUMP] = true;
+	if(check(trace, env, n-1))
+		return trace;
+	else
+		return dfs(trace, env, n);
+}
+
+Environment copyEnvironment(Environment src){
+	Environment dest = null;
+    try{
+    	ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    	ObjectOutputStream oos = new ObjectOutputStream(bos);
+    	oos.writeObject(src);
+    	oos.flush();
+    	oos.close();
+        ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
+        dest = (Environment)in.readObject();
+    }catch(Exception e){
+    	e.printStackTrace();
+    }	
+    return dest;
+}
+
 
 /**
  * @param repetitionsOfSingleEpisode
@@ -71,6 +121,8 @@ public BasicTask(MarioAIOptions marioAIOptions)
  */
 public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 {
+	List<boolean[]> trace = new ArrayList<boolean[]>();
+	List<Environment> env = new ArrayList<Environment>();
     long c = System.currentTimeMillis();
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
@@ -78,24 +130,60 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
         while (!environment.isLevelFinished())
         {
             environment.tick();
+            env.add(copyEnvironment(environment));
             if (!GlobalOptions.isGameplayStopped)
             {
                 c = System.currentTimeMillis();
                 agent.integrateObservation(environment);
                 agent.giveIntermediateReward(environment.getIntermediateReward());
 
-                boolean[] action = agent.getAction();
+                boolean[] action = agent.getAction().clone();
+                
+                trace.add(action);
                 if (System.currentTimeMillis() - c > COMPUTATION_TIME_BOUND)
                     return false;
 //                System.out.println("action = " + Arrays.toString(action));
 //            environment.setRecording(GlobalOptions.isRecording);
                 environment.performAction(action);
+                
+                if(environment.getMarioStatus() == Mario.STATUS_DEAD){
+                	trace = dfs(trace, env,trace.size());
+                	environment = copyEnvironment(env.get(env.size()-1));
+                	environment.performAction(trace.get(trace.size()-1));
+                	System.out.println("DFS done:" + environment.getMarioFloatPos()[0]);
+                }
+                
             }
         }
+        //options.setVisualization(true);
+        //environment.reset(options);
+        //System.out.println(options);
+        //environment = copyEnvironment(environment);
+ 
+        //replay
+        options.setVisualization(true);
+    	environment.reset(options);
+    	for(int i=0;i<trace.size() && !environment.isLevelFinished();++i){
+        	environment.tick();
+        	environment.performAction(trace.get(i));
+        }
+
+        //output trace
+        try{
+        	FileOutputStream fos = new FileOutputStream("output");
+        	ObjectOutputStream oos = new ObjectOutputStream(fos);
+        	oos.writeObject(trace);
+        	oos.flush();
+        	oos.close();
+        }catch(Exception e){
+        	e.printStackTrace();
+        }
+        
         environment.closeRecorder(); //recorder initialized in environment.reset
         environment.getEvaluationInfo().setTaskName(name);
         this.evaluationInfo = environment.getEvaluationInfo().clone();
-    }
+	}
+    
 
     return true;
 }
@@ -120,6 +208,22 @@ public void setOptionsAndReset(final String options)
 {
     this.options.setArgs(options);
     reset();
+}
+
+public void doReplay(){
+	List<boolean[]> trace = new ArrayList<boolean[]>();
+	options.setVisualization(true);
+	environment.reset(options);
+    try{
+    	ObjectInputStream in = new ObjectInputStream(new FileInputStream("output"));
+    	trace = (List<boolean[]>)in.readObject();
+        for(int i=0;i<trace.size() && !environment.isLevelFinished();++i){
+        	environment.tick();
+        	environment.performAction(trace.get(i));
+        }
+    }catch(Exception e){
+    	e.printStackTrace();
+    }
 }
 
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)

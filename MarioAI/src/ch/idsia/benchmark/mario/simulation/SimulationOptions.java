@@ -133,6 +133,11 @@ public String getLevelFileName()
     return getParameterValue("-s");
 }
 
+// by ianchou 
+public String getTask(){
+	return getParameterValue("-task");
+}
+
 // Agent
 
 public Agent getAgent()
