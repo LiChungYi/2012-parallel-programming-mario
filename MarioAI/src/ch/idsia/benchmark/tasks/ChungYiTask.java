@@ -187,7 +187,7 @@ void dumpPath(Vector<Integer> surePathGivenEnvironment){
 		trace.add(actionCodeToByteArray(surePathGivenEnvironment.get(i)));
 
 	try{
-		FileOutputStream fos = new FileOutputStream("ChungYi_marioTrace");
+		FileOutputStream fos = new FileOutputStream("output");
 		ObjectOutputStream oos = new ObjectOutputStream(fos);
 		oos.writeObject(trace);
 		oos.flush();
@@ -230,7 +230,7 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    }
 
 		    System.out.println("iter" + iter);
-		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size());
+		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size() + " targetLen" + targetLen);
 
 	    	    for(int i = 0; i < nSolution; ++i)
 			fitness[i] = 0;
@@ -257,8 +257,13 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    }
 
 		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
+		    if(wantEnvIndex != 0)
+		    	environmentPath.set(wantEnvIndex, null);
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
 		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN){
+	    			for(int i = 0; i < futurePathList.get(foundSol).size(); ++i){
+		    			surePathGivenEnvironment.add(futurePathList.get(foundSol).get(i));
+				}
 			    System.err.println("succeed! + marioMode: " + evaluationInfo.marioMode);
 			    dumpPath(surePathGivenEnvironment);
 			return;
@@ -319,12 +324,13 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 //	    environment.getEvaluationInfo();
 }
 
+/*
 public void doReplay(){
 	List<boolean[]> trace = new ArrayList<boolean[]>();
 	options.setVisualization(true);
 	initEnvironment.reset(options);
     try{
-    	ObjectInputStream in = new ObjectInputStream(new FileInputStream("ChungYi_marioTrace"));
+    	ObjectInputStream in = new ObjectInputStream(new FileInputStream("output"));
     	trace = (List<boolean[]>)in.readObject();
         for(int i=0;i<trace.size() && !initEnvironment.isLevelFinished();++i){
         	initEnvironment.performAction(trace.get(i));
@@ -333,7 +339,7 @@ public void doReplay(){
     }catch(Exception e){
     	e.printStackTrace();
     }
-}
+}*/
 
 
 
