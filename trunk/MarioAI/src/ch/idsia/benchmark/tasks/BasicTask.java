@@ -33,7 +33,6 @@ import ch.idsia.benchmark.mario.environments.Environment;
 import ch.idsia.benchmark.mario.environments.MarioEnvironment;
 import ch.idsia.tools.EvaluationInfo;
 import ch.idsia.tools.MarioAIOptions;
-import ch.idsia.tools.punj.PunctualJudge;
 import ch.idsia.utils.statistics.StatisticalSummary;
 
 import java.util.Vector;
@@ -55,9 +54,6 @@ private String name = getClass().getSimpleName();
 private EvaluationInfo evaluationInfo;
 
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
-
-public BasicTask(){
-}
 
 public BasicTask(MarioAIOptions marioAIOptions)
 {
