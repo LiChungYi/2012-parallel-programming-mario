@@ -59,8 +59,8 @@ import java.util.Vector;
  */
 
 public class ChungYiParallelTask implements Task{
-	byte[] theByteData;
 	public class EnvironmentGenerator{
+		byte[] theByteData;
 		EnvironmentGenerator(Environment src){
 			try{
 				ByteArrayOutputStream bos;	
@@ -103,9 +103,8 @@ public ChungYiParallelTask(MarioAIOptions marioAIOptions)
 {
 	initEnvironment = new MarioEnvironment();
 	marioAIOptions.setVisualization(false); //can't be true... since we are copying environment
-    this.setOptionsAndReset(marioAIOptions);
+	this.setOptionsAndReset(marioAIOptions);
 }
-
 
 
 boolean[] actionCodeToByteArray(Integer actionCode){
@@ -230,6 +229,18 @@ void dumpPath(Vector<boolean[]> surePathGivenEnvironment){
 	}
 	catch(Exception e){
 		e.printStackTrace();
+	}
+}
+
+class ParallelTask{
+	int threadID;
+	Random random;
+	ParallelTask(int id){
+		threadID = id;
+		random = new Random(id);
+	}
+	void run(){
+		
 	}
 }
 

@@ -233,11 +233,20 @@ void dumpPath(Vector<boolean[]> surePathGivenEnvironment){
 	}
 }
 
+void myAssert(boolean s){
+	if(s == false){
+		Exception e = new Exception();
+		e.printStackTrace();
+		System.exit(-1);
+	}
+}
+
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {
 
     int nSolution = 100, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
     int backTrack_nOperation = 15;
+    int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 200, FITNESS_BIG_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
 
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
     Vector<Environment> environmentPath = new Vector<Environment>();
@@ -251,67 +260,50 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
     environmentPath.add(initEnvironment);
 
     int lastFitness = Integer.MAX_VALUE;
+    int stuck = 0;
     while(true){
-	    int iter = 0;
 	    int foundSol = 0, foundAcceptableSol = 0;
-	    int stuck = 0;
-	    while(foundSol != nSolution && foundAcceptableSol != nSolutionForAcceptableDecrease){
-		    if(iter > 300 && stuck == 0){//if stuck do not backTrack again
-			stuck = 1;
-			int newSize = surePathGivenEnvironment.size()-backTrack_nOperation;
-			newSize = newSize >= 0? newSize: 0;
-		 	surePathGivenEnvironment.setSize(newSize); 
-			environmentPath.setSize(newSize+1);		//initEnvironment will always be kept
-			iter -= 300;
-		    }
+	    for(int i = 0; i < nSolution; ++i)
+		    fitness[i] = 0;
 
+	    myAssert(surePathGivenEnvironment.size() == environmentPath.size()-1);
+	    int wantEnvIndex = surePathGivenEnvironment.size();
+	    if(environmentPath.get(wantEnvIndex) == null ){
+		    int notNullIndex = surePathGivenEnvironment.size()-1;
+		    while(environmentPath.get(notNullIndex) == null) --notNullIndex;
+
+		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.get(notNullIndex));
+		    environmentPath.set(wantEnvIndex, gen.copyEnvironment());
+		    for(int i = notNullIndex; i < wantEnvIndex; ++i){
+			    environmentPath.get(wantEnvIndex).performAction(surePathGivenEnvironment.get(i));
+			    environmentPath.get(wantEnvIndex).tick();
+		    }
+	    }
+	    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
+
+	    int maxIter = stuck == 0? 300: Integer.MAX_VALUE;
+	    int iter;
+	    for(iter = 0; iter < maxIter; ++iter){
 		    System.out.println("iter" + iter);
 		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size() + " targetLen" + targetLen);
+		    myAssert(surePathGivenEnvironment.size() == environmentPath.size()-1);
 
-	    	    for(int i = 0; i < nSolution; ++i)
-			fitness[i] = 0;
-		    
-		    if(surePathGivenEnvironment.size() != environmentPath.size()-1){
-			    System.err.println("bug!");
-			    System.exit(0);
-		    }
-
-		    int wantEnvIndex = surePathGivenEnvironment.size();
-		    if(environmentPath.get(wantEnvIndex) == null ){
-			    int notNullIndex = surePathGivenEnvironment.size()-1;
-			    while(environmentPath.get(notNullIndex) == null) --notNullIndex;
-
-			    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.get(notNullIndex));
-			    environmentPath.set(wantEnvIndex, gen.copyEnvironment());
-			    for(int i = notNullIndex; i < wantEnvIndex; ++i){
-				    environmentPath.get(wantEnvIndex).performAction(surePathGivenEnvironment.get(i));
-				    environmentPath.get(wantEnvIndex).tick();
-			    }
-		    }
-
-		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
-	
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
-		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN){
-			    for(int i = 0; i < futurePathList.get(foundSol).size(); ++i){
-				    surePathGivenEnvironment.add(futurePathList.get(foundSol).get(i));
-			    }
-			    System.err.println("succeed! + marioMode: " + evaluationInfo.marioMode);
-			    dumpPath(surePathGivenEnvironment);
-			return;
-		    }
 
 		    if(evaluationInfo.marioMode == 1)//big, no fire
-			    fitness[foundSol] += 100;
+			    fitness[foundSol] += FITNESS_BIG_MARIO;
 		    if(evaluationInfo.marioMode == 2)//fire
-			    fitness[foundSol] += 200;
+			    fitness[foundSol] += FITNESS_FIRE_MARIO;
 		    double l = evaluationInfo.timeLeft;
 		    double u = evaluationInfo.timeSpent;
 		    fitness[foundSol] *= (l/(l+u));
 
+		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN)
+			    fitness[foundSol] += FITNESS_WIN;
+
 		    System.out.println("futurePath [" + foundSol + "] length = " + futurePathList.get(foundSol).size() + ", fitness = " + fitness[foundSol]);
 
-		    if(evaluationInfo.marioStatus == Mario.STATUS_RUNNING){
+		    if(evaluationInfo.marioStatus == Mario.STATUS_RUNNING || evaluationInfo.marioStatus == Mario.STATUS_WIN){
 			    if(lastFitness-fitness[foundSol] < acceptableFitnessDecrease)
 				    ++foundAcceptableSol;
 			    ++foundSol;
@@ -319,7 +311,25 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    else{//delete this Vector
 			futurePathList.get(foundSol).clear();
 		    }
-		    ++iter;
+
+		    if(foundSol == nSolution || foundAcceptableSol == nSolutionForAcceptableDecrease)
+			    break;
+	    }
+
+	    if(stuck == 0 && iter == maxIter){//fail, try search longer
+		    myAssert(!(foundSol == nSolution || foundAcceptableSol == nSolutionForAcceptableDecrease) );//fail
+
+		    stuck = 1;
+		    int newSize = surePathGivenEnvironment.size()-backTrack_nOperation;
+		    newSize = newSize >= 0? newSize: 0;
+		    surePathGivenEnvironment.setSize(newSize); 
+		    environmentPath.setSize(newSize+1);		//initEnvironment will always be kept
+		    continue;
+	    }
+	    if(stuck == 1){//must succeed after stuck
+		    myAssert(iter < maxIter);//succeed
+		    myAssert(foundSol == nSolution || foundAcceptableSol == nSolutionForAcceptableDecrease);//succeed
+		    stuck = 0;
 	    }
 
 	    //sort by fitness
@@ -332,17 +342,22 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 				futurePathList.set(j, tmpV);
 			}
 		    }
+
 	    //survive => add the best to surePathGivenEnvironment
-	    targetLen += targetLenStep;
 	    for(int i = 0; i < futurePathList.get(0).size(); ++i){
 		    surePathGivenEnvironment.add(futurePathList.get(0).get(i));
 		    environmentPath.add(null);
 	    }
-	    lastFitness = fitness[0];   
-	    
 	    dumpPath(surePathGivenEnvironment);
-    }
 
+	    if(fitness[0] >= FITNESS_WIN){
+		    System.out.println("SUCCEED!!!!!!!");
+		    return;
+	    }
+
+	    targetLen += targetLenStep;
+	    lastFitness = fitness[0];   
+    }
 
     //EvaluationInfo.numberOfElements
 //	    environment.getEvaluationInfo();
