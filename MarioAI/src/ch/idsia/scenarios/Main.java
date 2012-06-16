@@ -28,10 +28,9 @@
 package ch.idsia.scenarios;
 
 import ch.idsia.benchmark.tasks.BasicTask;
-import ch.idsia.benchmark.tasks.BasicTask2;
-import ch.idsia.benchmark.tasks.BasicTaskClean;
 import ch.idsia.benchmark.tasks.ChungYiTask;
 import ch.idsia.benchmark.tasks.IanchouTask;
+import ch.idsia.benchmark.tasks.Task;
 import ch.idsia.tools.MarioAIOptions;
 
 /**
@@ -45,7 +44,7 @@ public static void main(String[] args)
 
     final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
     
-    final BasicTask basicTask;
+    Task basicTask;
     if(marioAIOptions.getTask().equals("ChungYi"))
     	basicTask = new ChungYiTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("ianchou"))

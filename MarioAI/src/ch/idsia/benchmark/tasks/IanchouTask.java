@@ -34,7 +34,6 @@ import ch.idsia.benchmark.mario.environments.Environment;
 import ch.idsia.benchmark.mario.environments.MarioEnvironment;
 import ch.idsia.tools.EvaluationInfo;
 import ch.idsia.tools.MarioAIOptions;
-import ch.idsia.tools.punj.PunctualJudge;
 import ch.idsia.utils.statistics.StatisticalSummary;
 
 import java.io.ByteArrayInputStream;
@@ -54,7 +53,7 @@ import java.util.Vector;
  * Date: Mar 14, 2010 Time: 4:47:33 PM
  */
 
-public class IanchouTask extends BasicTask
+public class IanchouTask implements Task
 {
 protected Environment environment;
 private Agent agent;
