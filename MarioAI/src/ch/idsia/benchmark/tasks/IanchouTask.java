@@ -28,6 +28,9 @@
 package ch.idsia.benchmark.tasks;
 
 import ch.idsia.agents.Agent;
+import ch.idsia.agents.controllers.ForwardAgent;
+import ch.idsia.agents.controllers.ScaredShooty;
+import ch.idsia.agents.controllers.SearchingAgent;
 import ch.idsia.benchmark.mario.engine.GlobalOptions;
 import ch.idsia.benchmark.mario.engine.sprites.Mario;
 import ch.idsia.benchmark.mario.environments.Environment;
@@ -44,6 +47,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 
 /**
@@ -71,69 +75,97 @@ public IanchouTask(MarioAIOptions marioAIOptions)
 	marioAIOptions.setVisualization(false); //can't be true...
 	if(marioAIOptions.getParameterValue("-ag").equals("ch.idsia.agents.controllers.human.HumanKeyboardAgent"));
 		marioAIOptions.setParameterValue("-ag", "ch.idsia.agents.controllers.ForwardAgent");
-    this.setOptionsAndReset(marioAIOptions);
+	this.setOptionsAndReset(marioAIOptions);
 }
 
-Environment copy(Environment src){
-	Environment dest = null;
+byte[] copy(Environment src){
+	ByteArrayOutputStream bos = null;
     try{
-    	ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    	bos = new ByteArrayOutputStream();
     	ObjectOutputStream oos = new ObjectOutputStream(bos);
     	oos.writeObject(src);
     	oos.flush();
     	oos.close();
-        ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
-        dest = (Environment)in.readObject();
     }catch(Exception e){
     	e.printStackTrace();
-    }	
+    }
+    return bos != null ? bos.toByteArray() : null;
+}
+
+Environment get(byte[] src){
+	Environment dest = null;
+	try{
+		ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(src));
+		dest = (Environment)in.readObject();
+	}catch(Exception e){
+		e.printStackTrace();
+	}
     return dest;
 }
 
-private boolean check(List<boolean[]> trace, List<Environment> env, int x){
-	environment = copy(env.get(x));
-    for(int i=x;i<trace.size() && environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode()==2;++i){
+void update(int x, List<boolean[]> trace, List<byte[]> env){
+	Environment environment = get(env.get(x));
+    for(int i=x;i<trace.size();++i){
+    	if(environment.isLevelFinished()){
+    		System.err.println("you got trouble!");
+    	}
     	environment.performAction(trace.get(i));
     	environment.tick();
-    	if(i+1 < env.size())
+    	if(i+1 < trace.size()){
     		env.set(i+1, copy(environment));
+    	}
     }
-    return environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode() == 2;
 }
 
-private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int x){
-	System.err.println(environment.getMarioFloatPos()[0] + " " + x);
-	if(!trace.get(x)[Mario.KEY_JUMP]){
-		if(x == trace.size()-1){
-			int p;
-			for(p=x-1;p>=0;--p){
-				if(trace.get(p)[Mario.KEY_JUMP])
-					break;
-			}
-			trace.get(p)[Mario.KEY_JUMP] = false;
-			for(int i=p+1;i<trace.size();++i)
-				trace.get(i)[Mario.KEY_JUMP] = true;
-			environment = copy(env.get(p));
-			if(check(trace, env, p)){
-				return trace;
-			}else{
-				environment = copy(env.get(p+1));
-				return dfs(trace, env, p+1);
-			}
-		}else{
-			environment = copy(env.get(x+1));
-			return dfs(trace, env, x+1);
-		}
-	}else{
-		trace.get(x)[Mario.KEY_JUMP] = false;
-		if(check(trace, env, x)){	
-			return trace;
-		}
-		else{
-			environment = copy(env.get(x));
-			return dfs(trace, env, x);
+private List<boolean[]> simulate(Environment environment, int[] seq, int len){
+	List<boolean[]> trace = new ArrayList<boolean[]>();
+	Agent agent[] = new Agent[2];
+	agent[0] = new ForwardAgent();
+	agent[1] = new ScaredShooty();
+	int now=1, index=0;
+
+    for(int i=0;i<len && environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode()==2; ++i){
+    	if(index<seq.length && i==seq[index]){
+    		now = 1-now;
+    		index++;
+    	}
+    	agent[now].integrateObservation(environment);
+    	agent[now].giveIntermediateReward(environment.getIntermediateReward());
+    	boolean[] action = agent[now].getAction().clone();
+    	trace.add(action.clone());
+    	environment.performAction(action);
+    	environment.tick();
+    }
+    return trace;
+}
+
+List<Integer> randomSeq(int len, int range){
+	List<Integer> ret = new ArrayList<Integer>();
+	Random random = new Random(0);
+	int now = 0;
+	for(int i=0;i<len;++i){
+		now  += random.nextInt(range/len + 1);
+		ret.add(now);
+	}
+	return ret;
+}
+
+int[] next(int[] seq, int range){
+	if(seq.length==0)
+		return null;
+	if(seq[seq.length-1]+1 < range){
+		++seq[seq.length-1];
+		return seq;
+	}
+	for(int i=seq.length-2;i>=0;--i){
+		if(seq[i]+1<seq[i]){
+			seq[i]++;
+			for(int j=1;i+j<seq.length;++j)
+				seq[i+j] = seq[i]+j;
+			return seq;
 		}
 	}
+	return null;
 }
 
 /**
@@ -143,18 +175,49 @@ private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int x)
 public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 {
 	List<boolean[]> trace = new ArrayList<boolean[]>();
-	List<Environment> env = new ArrayList<Environment>();
+	List<byte[]> env = new ArrayList<byte[]>();
+
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
         this.reset();
         while (!environment.isLevelFinished())
         {
             environment.tick();
-            if(environment.getMarioMode()<2 || environment.getMarioStatus() == Mario.STATUS_DEAD){    	
-            	environment = copy(env.get(env.size()-1));
-            	trace = dfs(trace, env, trace.size()-1);
+
+            boolean solved = environment.getMarioMode()==2 && environment.getMarioStatus() != Mario.STATUS_DEAD;
+            int i,j=-1;
+            for(i=trace.size()-1;i>=0 && !solved;--i){
+            	for(j=0;j<3 && i+j<trace.size() && !solved;++j){
+            		int seq[] = new int[j];
+            		for(int k=0;k<j;++k)
+            			seq[k] = k;
+            		do{
+            			environment = get(env.get(i));
+            			List<boolean[]> actions = simulate(environment, seq, trace.size()-i);
+            			if((environment.getMarioMode()==2 && environment.getMarioStatus() != Mario.STATUS_DEAD)){
+            				solved = true;
+            				trace = trace.subList(0, i);
+            				trace.addAll(actions);
+            				update(i, trace, env);
+            			}
+            			System.err.println(i + " " + j + " " + environment.getMarioFloatPos()[0]);
+            		}while(!solved && (seq = next(seq, trace.size()-i))!=null);
+            	}
             }
-            
+
+            if(!solved){
+            	System.err.println("QQ");
+            	try{
+                    FileOutputStream fos = new FileOutputStream("output");
+                    ObjectOutputStream oos = new ObjectOutputStream(fos);
+                    oos.writeObject(new ArrayList<boolean[]>(trace));
+                    oos.flush();
+                    oos.close();
+                    return false;
+                }catch(Exception e){
+                   	e.printStackTrace();
+                }
+            }
 
             env.add(copy(environment));
             if (!GlobalOptions.isGameplayStopped)
@@ -163,7 +226,7 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
                 agent.giveIntermediateReward(environment.getIntermediateReward());
 
                 boolean[] action = agent.getAction().clone();
-                
+
                 trace.add(action);
                 environment.performAction(action);
             }
@@ -183,7 +246,7 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
         try{
         	FileOutputStream fos = new FileOutputStream("output");
         	ObjectOutputStream oos = new ObjectOutputStream(fos);
-        	oos.writeObject(trace);
+        	oos.writeObject(new ArrayList<boolean[]>(trace));
         	oos.flush();
         	oos.close();
         }catch(Exception e){
@@ -194,7 +257,6 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
         environment.getEvaluationInfo().setTaskName(name);
         this.evaluationInfo = environment.getEvaluationInfo().clone();
 	}
-    
 
     return true;
 }
