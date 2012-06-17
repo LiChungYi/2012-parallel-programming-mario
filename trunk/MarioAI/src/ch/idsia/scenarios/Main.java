@@ -46,19 +46,19 @@ public static void main(String[] args)
 {
 
     final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
-    
+
     Task basicTask;
     if(marioAIOptions.getTask().equals("ChungYi"))
     	basicTask = new ChungYiTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("ianchou"))
     	basicTask = new IanchouTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("Replay"))
-		basicTask = new OurReplayTask(marioAIOptions);
+    	basicTask = new OurReplayTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("shik"))
-		basicTask = new ShikTask(marioAIOptions);
+    	basicTask = new ShikTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("ChungYiParallel"))
-	basicTask = new ChungYiParallelTask(marioAIOptions);
-    else 
+    	basicTask = new ChungYiParallelTask(marioAIOptions);
+    else
     	basicTask = new BasicTask(marioAIOptions);
      
 //    final BasicTaskClean basicTask = new BasicTaskClean(marioAIOptions);
@@ -67,7 +67,7 @@ public static void main(String[] args)
 //    basicTask.doReplay();
     basicTask.doEpisodes(1,true,1);
     System.exit(0);
-	
+
     /*
 //        final String argsString = "-vis on";
     final MarioAIOptions marioAIOptions = new MarioAIOptions(args);
