@@ -103,7 +103,7 @@ public ChungYiParallelTask(MarioAIOptions marioAIOptions)
 {
 	initEnvironment = new MarioEnvironment();
 	marioAIOptions.setVisualization(false); //can't be true... since we are copying environment
-	this.setOptionsAndReset(marioAIOptions);
+    this.setOptionsAndReset(marioAIOptions);
 }
 
 
@@ -232,128 +232,192 @@ void dumpPath(Vector<boolean[]> surePathGivenEnvironment){
 	}
 }
 
-class ParallelTask{
-	int threadID;
-	Random random;
-	ParallelTask(int id){
-		threadID = id;
-		random = new Random(id);
-	}
-	void run(){
-		
+void myAssert(boolean s){
+	if(s == false){
+		Exception e = new Exception();
+		e.printStackTrace();
+		System.exit(-1);
 	}
 }
 
+
+class ResultFromWorkers{
+	int[] fitness;	
+	Vector<Vector<boolean[]> > futurePathList;
+	int foundSol, foundAcceptableSol;
+	int lastFitness;
+	ResultFromWorkers(int in_lastFitness){
+		fitness = new int[ChungYiParallelTask.nSolution];
+		futurePathList = new Vector<Vector<boolean[]> >();
+		futurePathList.setSize(nSolution);
+		foundSol = 0;
+		foundAcceptableSol = 0;
+		lastFitness = in_lastFitness;
+	}
+	synchronized boolean writeResult(int f, Vector<boolean[]> aFuturePath){
+		if(isFinished())
+			return false;
+		fitness[foundSol] = f;
+		futurePathList.set(foundSol, aFuturePath);
+		++foundSol;	
+		
+		if(lastFitness - f < ChungYiParallelTask.acceptableFitnessDecrease)
+			++foundAcceptableSol;
+		return true;
+	}
+	boolean isFinished(){
+		if(foundSol == ChungYiParallelTask.nSolution || foundAcceptableSol == ChungYiParallelTask.nSolutionForAcceptableDecrease)
+			return true;
+		return false;
+	}
+	void moveBestToFirst(){
+		for(int i = 1; i < fitness.length; ++i){
+			if(fitness[i] > fitness[0]){
+				int tmp = fitness[0];
+				fitness[0] = fitness[i];
+				fitness[i] = tmp;
+
+				Vector<boolean[]> tmpV = futurePathList.get(0);
+				futurePathList.set(0, futurePathList.get(i));
+				futurePathList.set(i, tmpV);
+			}
+		}	
+	}
+
+}
+
+class ParallelWorker implements Runnable{
+	int threadID;
+	Random random;
+	EnvironmentGenerator gen;
+	int maxIter;
+	int targetLen;
+	ResultFromWorkers resultFromWorkers;
+	ParallelWorker(int id, Random in_random, EnvironmentGenerator in_gen, int in_maxIter, int in_targetLen, ResultFromWorkers in_resultFromWorker){
+		threadID = id;
+		random = in_random;
+		gen = in_gen;
+		maxIter = in_maxIter;
+		targetLen = in_targetLen;
+		resultFromWorkers = in_resultFromWorker;
+	}
+	public void run(){
+		for(int i = 0; i < maxIter; ++i){
+			Vector<boolean[]> aFuturePath = new Vector<boolean[]>();
+			EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), aFuturePath, random, targetLen); 
+
+			int fitness = 0;
+
+			if(evaluationInfo.marioMode == 1)//big, no fire
+				fitness += FITNESS_BIG_MARIO;
+			if(evaluationInfo.marioMode == 2)//fire
+				fitness += FITNESS_FIRE_MARIO;
+			double l = evaluationInfo.timeLeft;
+			double u = evaluationInfo.timeSpent;
+			fitness *= (l/(l+u));
+
+			if(evaluationInfo.marioStatus == Mario.STATUS_WIN)
+				fitness += FITNESS_WIN;
+
+			if(evaluationInfo.marioStatus == Mario.STATUS_RUNNING || evaluationInfo.marioStatus == Mario.STATUS_WIN){
+				if(!resultFromWorkers.writeResult(fitness, aFuturePath))
+					break;
+			}
+		}
+
+	}
+}
+
+static final int nSolution = 100, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
+static final int backTrack_nOperation = 15;
+static final int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 200, FITNESS_BIG_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
+static final int nWorker = 4;
+
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {
-
-    int nSolution = 100, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
-    int backTrack_nOperation = 15;
-
+    int targetLen = targetLenStep;
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
     Vector<Environment> environmentPath = new Vector<Environment>();
     Vector<boolean[]> surePathGivenEnvironment = new Vector<boolean[]>();
-    Vector<Vector<boolean[]> > futurePathList = new Vector<Vector<boolean[]> >();
-    int[] fitness = new int[nSolution];
-    Random random = new Random(0);
-    for(int i = 0; i < nSolution; ++i)
-    	futurePathList.add(new Vector<boolean[]>());
+
+    Random[] randomList = new Random[nWorker];
+    for(int i = 0; i < nWorker; ++i)
+	    randomList[i] = new Random(i);
+
+
     initEnvironment.tick();				//the convension is "a tick first then (perform+tick)*"
     environmentPath.add(initEnvironment);
 
     int lastFitness = Integer.MAX_VALUE;
+    int stuck = 0;
     while(true){
-	    int iter = 0;
-	    int foundSol = 0, foundAcceptableSol = 0;
-	    int stuck = 0;
-	    while(foundSol != nSolution && foundAcceptableSol != nSolutionForAcceptableDecrease){
-		    if(iter > 300 && stuck == 0){//if stuck do not backTrack again
-			stuck = 1;
-			int newSize = surePathGivenEnvironment.size()-backTrack_nOperation;
-			newSize = newSize >= 0? newSize: 0;
-		 	surePathGivenEnvironment.setSize(newSize); 
-			environmentPath.setSize(newSize+1);		//initEnvironment will always be kept
-			iter -= 300;
+	    myAssert(surePathGivenEnvironment.size() == environmentPath.size()-1);
+	    int wantEnvIndex = surePathGivenEnvironment.size();
+	    if(environmentPath.get(wantEnvIndex) == null ){
+		    int notNullIndex = surePathGivenEnvironment.size()-1;
+		    while(environmentPath.get(notNullIndex) == null) --notNullIndex;
+
+		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.get(notNullIndex));
+		    environmentPath.set(wantEnvIndex, gen.copyEnvironment());
+		    for(int i = notNullIndex; i < wantEnvIndex; ++i){
+			    environmentPath.get(wantEnvIndex).performAction(surePathGivenEnvironment.get(i));
+			    environmentPath.get(wantEnvIndex).tick();
 		    }
+	    }
+	    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
 
-		    System.out.println("iter" + iter);
-		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size() + " targetLen" + targetLen);
+	    int maxIter = stuck == 0? 300: Integer.MAX_VALUE;
 
-	    	    for(int i = 0; i < nSolution; ++i)
-			fitness[i] = 0;
-		    
-		    if(surePathGivenEnvironment.size() != environmentPath.size()-1){
-			    System.err.println("bug!");
-			    System.exit(0);
+	    ResultFromWorkers resultFromWorkers = new ResultFromWorkers(lastFitness);
+	    Thread[] worker = new Thread[nWorker];
+	    for(int i = 0; i < nWorker; ++i){
+		   worker[i] = new Thread(new ParallelWorker(i, randomList[i], gen, (maxIter/nWorker)+1, targetLen, resultFromWorkers)); 
+		   worker[i].start();
+	    }
+	    
+	    //busy check if enough solution
+	    for(int i = 0; i < nWorker; ++i){
+		    try{
+		    	worker[i].join();
 		    }
-
-		    int wantEnvIndex = surePathGivenEnvironment.size();
-		    if(environmentPath.get(wantEnvIndex) == null ){
-			    int notNullIndex = surePathGivenEnvironment.size()-1;
-			    while(environmentPath.get(notNullIndex) == null) --notNullIndex;
-
-			    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.get(notNullIndex));
-			    environmentPath.set(wantEnvIndex, gen.copyEnvironment());
-			    for(int i = notNullIndex; i < wantEnvIndex; ++i){
-				    environmentPath.get(wantEnvIndex).performAction(surePathGivenEnvironment.get(i));
-				    environmentPath.get(wantEnvIndex).tick();
-			    }
+		    catch(Exception e){
+		    	e.printStackTrace();
 		    }
-
-		    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
-	
-		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
-		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN){
-			    for(int i = 0; i < futurePathList.get(foundSol).size(); ++i){
-				    surePathGivenEnvironment.add(futurePathList.get(foundSol).get(i));
-			    }
-			    System.err.println("succeed! + marioMode: " + evaluationInfo.marioMode);
-			    dumpPath(surePathGivenEnvironment);
-			return;
-		    }
-
-		    if(evaluationInfo.marioMode == 1)//big, no fire
-			    fitness[foundSol] += 100;
-		    if(evaluationInfo.marioMode == 2)//fire
-			    fitness[foundSol] += 200;
-		    double l = evaluationInfo.timeLeft;
-		    double u = evaluationInfo.timeSpent;
-		    fitness[foundSol] *= (l/(l+u));
-
-		    System.out.println("futurePath [" + foundSol + "] length = " + futurePathList.get(foundSol).size() + ", fitness = " + fitness[foundSol]);
-
-		    if(evaluationInfo.marioStatus == Mario.STATUS_RUNNING){
-			    if(lastFitness-fitness[foundSol] < acceptableFitnessDecrease)
-				    ++foundAcceptableSol;
-			    ++foundSol;
-		    }
-		    else{//delete this Vector
-			futurePathList.get(foundSol).clear();
-		    }
-		    ++iter;
 	    }
 
-	    //sort by fitness
-	    for(int i = 0; i < futurePathList.size(); ++i)
-		    for(int j = i + 1; j < futurePathList.size(); ++j){
-		    	if(fitness[i] < fitness[j]){
-				int tmp = fitness[i]; fitness[i] = fitness[j]; fitness[j] = tmp;
-				Vector<boolean[]> tmpV = futurePathList.get(i); 
-				futurePathList.set(i, futurePathList.get(j));
-				futurePathList.set(j, tmpV);
-			}
-		    }
+	    if(stuck == 0 && !resultFromWorkers.isFinished() ){//fail, try search longer
+		    stuck = 1;
+		    int newSize = surePathGivenEnvironment.size()-backTrack_nOperation;
+		    newSize = newSize >= 0? newSize: 0;
+		    surePathGivenEnvironment.setSize(newSize); 
+		    environmentPath.setSize(newSize+1);		//initEnvironment will always be kept
+		    continue;
+	    }
+	    if(stuck == 1){//must succeed after stuck
+		    myAssert(resultFromWorkers.isFinished());//succeed
+		    stuck = 0;
+	    }
+
+	    resultFromWorkers.moveBestToFirst();
+
+	    int bestFitness = resultFromWorkers.fitness[0];
+	    Vector<boolean[]> bestFuturePath = resultFromWorkers.futurePathList.get(0);
+
 	    //survive => add the best to surePathGivenEnvironment
-	    targetLen += targetLenStep;
-	    for(int i = 0; i < futurePathList.get(0).size(); ++i){
-		    surePathGivenEnvironment.add(futurePathList.get(0).get(i));
+	    for(int i = 0; i < bestFuturePath.size(); ++i){
+		    surePathGivenEnvironment.add(bestFuturePath.get(i));
 		    environmentPath.add(null);
 	    }
-	    lastFitness = fitness[0];   
-	    
 	    dumpPath(surePathGivenEnvironment);
-    }
 
+	    if(bestFitness >= FITNESS_WIN){
+		    System.out.println("SUCCEED!!!!!!!");
+		    return;
+	    }
+
+	    targetLen += targetLenStep;
+	    lastFitness = bestFitness;   
+    }
 
     //EvaluationInfo.numberOfElements
 //	    environment.getEvaluationInfo();
@@ -423,3 +487,4 @@ public EvaluationInfo getEvaluationInfo()
 //                System.out.println("Agent is disqualified on this level");
 //                return false;
 //            }
+ 
