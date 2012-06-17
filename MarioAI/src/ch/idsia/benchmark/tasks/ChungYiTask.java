@@ -106,23 +106,6 @@ public ChungYiTask(MarioAIOptions marioAIOptions)
     this.setOptionsAndReset(marioAIOptions);
 }
 
-
-
-boolean[] actionCodeToByteArray(Integer actionCode){
-    	    boolean[] action = new boolean[Environment.numberOfKeys];
-	    if(actionCode == 0)
-		    action[Mario.KEY_RIGHT] = true;
-	    else if(actionCode == 1){
-		    action[Mario.KEY_SPEED] = true;
-		    action[Mario.KEY_RIGHT] = true;
-	    }
-	    else{
-		    action[Mario.KEY_RIGHT] = true;
-		    action[Mario.KEY_JUMP] = true;
-	    }
-	    return action;
-}
-
 /**
  * @param repetitionsOfSingleEpisode
  * @return boolean flag whether controller is disqualified or not
@@ -139,8 +122,13 @@ boolean[] actionCodeToByteArray(Integer actionCode){
 			jumpOp = r.nextInt(3);
 		if(speedOp == -1)
 			speedOp = r.nextInt(2);
-		if(rightOp == -1)
+		if(rightOp == -1){
 			rightOp = r.nextInt(2);
+			if(rightOp == 1){
+				if(r.nextInt(5) == 0)
+					rightOp = 2;//right until reach the ground
+			}
+		}
 	}
 	boolean[] getAction(Environment environment){
 		boolean[] action = new boolean[Environment.numberOfKeys];
@@ -156,10 +144,13 @@ boolean[] actionCodeToByteArray(Integer actionCode){
 		}
 		if(jumpOp != 2)
 			jumpOp = -1;
-		if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
+		else if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
 			jumpOp = -1;
 		speedOp = -1;
-		rightOp = -1;
+		if(rightOp != 2)
+			rightOp = -1;
+		else if(rightOp == 2 && environment.isMarioOnGround())
+			rightOp = -1;
 		return action;
 	}
     }
@@ -245,7 +236,7 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 {
 
     int nSolution = 100, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
-    int backTrack_nOperation = 15;
+    int backTrack_nOperation = 40;
     int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 200, FITNESS_BIG_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
 
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
@@ -310,6 +301,7 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    }
 		    else{//delete this Vector
 			futurePathList.get(foundSol).clear();
+			fitness[foundSol] = 0;
 		    }
 
 		    if(foundSol == nSolution || foundAcceptableSol == nSolutionForAcceptableDecrease)
@@ -331,16 +323,25 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    myAssert(foundSol == nSolution || foundAcceptableSol == nSolutionForAcceptableDecrease);//succeed
 		    stuck = 0;
 	    }
+		for(int i = 1; i < fitness.length; ++i){
+			if(fitness[i] > fitness[0]){
+				int tmp = fitness[0];
+				fitness[0] = fitness[i];
+				fitness[i] = tmp;
+
+				Vector<boolean[]> tmpV = futurePathList.get(0);
+				futurePathList.set(0, futurePathList.get(i));
+				futurePathList.set(i, tmpV);
+			}
+		}	
 
 	    //sort by fitness
-	    for(int i = 0; i < futurePathList.size(); ++i)
-		    for(int j = i + 1; j < futurePathList.size(); ++j){
-		    	if(fitness[i] < fitness[j]){
-				int tmp = fitness[i]; fitness[i] = fitness[j]; fitness[j] = tmp;
-				Vector<boolean[]> tmpV = futurePathList.get(i); 
-				futurePathList.set(i, futurePathList.get(j));
-				futurePathList.set(j, tmpV);
-			}
+	    for(int i = 1; i < futurePathList.size(); ++i)
+		    if(fitness[0] < fitness[i]){
+			    int tmp = fitness[i]; fitness[i] = fitness[0]; fitness[0] = tmp;
+			    Vector<boolean[]> tmpV = futurePathList.get(i); 
+			    futurePathList.set(i, futurePathList.get(0));
+			    futurePathList.set(0, tmpV);
 		    }
 
 	    //survive => add the best to surePathGivenEnvironment

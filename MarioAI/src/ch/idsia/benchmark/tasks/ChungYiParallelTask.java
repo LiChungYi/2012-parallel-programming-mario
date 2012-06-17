@@ -106,22 +106,6 @@ public ChungYiParallelTask(MarioAIOptions marioAIOptions)
     this.setOptionsAndReset(marioAIOptions);
 }
 
-
-boolean[] actionCodeToByteArray(Integer actionCode){
-    	    boolean[] action = new boolean[Environment.numberOfKeys];
-	    if(actionCode == 0)
-		    action[Mario.KEY_RIGHT] = true;
-	    else if(actionCode == 1){
-		    action[Mario.KEY_SPEED] = true;
-		    action[Mario.KEY_RIGHT] = true;
-	    }
-	    else{
-		    action[Mario.KEY_RIGHT] = true;
-		    action[Mario.KEY_JUMP] = true;
-	    }
-	    return action;
-}
-
 /**
  * @param repetitionsOfSingleEpisode
  * @return boolean flag whether controller is disqualified or not
@@ -138,8 +122,13 @@ boolean[] actionCodeToByteArray(Integer actionCode){
 			jumpOp = r.nextInt(3);
 		if(speedOp == -1)
 			speedOp = r.nextInt(2);
-		if(rightOp == -1)
+		if(rightOp == -1){
 			rightOp = r.nextInt(2);
+			if(rightOp == 1){
+				if(r.nextInt(5) == 0)
+					rightOp = 2;//right until reach the ground
+			}
+		}
 	}
 	boolean[] getAction(Environment environment){
 		boolean[] action = new boolean[Environment.numberOfKeys];
@@ -155,10 +144,13 @@ boolean[] actionCodeToByteArray(Integer actionCode){
 		}
 		if(jumpOp != 2)
 			jumpOp = -1;
-		if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
+		else if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
 			jumpOp = -1;
 		speedOp = -1;
-		rightOp = -1;
+		if(rightOp != 2)
+			rightOp = -1;
+		else if(rightOp == 2 && environment.isMarioOnGround())
+			rightOp = -1;
 		return action;
 	}
     }
