@@ -136,28 +136,6 @@ private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int x)
 	}
 }
 
-
-/*
-private List<boolean[]> dfs(List<boolean[]> trace, List<Environment> env, int x){ 
-	System.out.println(x);
-	if(trace.get(x)[Mario.KEY_JUMP]){
-		trace.get(x)[Mario.KEY_JUMP] = false;
-		if(check(trace, env, x))
-			return trace;
-		else
-			return dfs(trace, env, x-1);
-	}else if(env.get(x).isMarioAbleToJump()){
-		trace.get(x)[Mario.KEY_JUMP] = true;
-		if(check(trace, env, x))
-			return trace;
-		else
-			return dfs(trace, env, x-1);
-	}else{
-		return dfs(trace, env, x-1);
-	}
-}
-*/
-
 /**
  * @param repetitionsOfSingleEpisode
  * @return boolean flag whether controller is disqualified or not
@@ -187,15 +165,9 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
                 boolean[] action = agent.getAction().clone();
                 
                 trace.add(action);
-//                System.out.println("action = " + Arrays.toString(action));
-//            environment.setRecording(GlobalOptions.isRecording);
                 environment.performAction(action);
             }
         }
-        //options.setVisualization(true);
-        //environment.reset(options);
-        //System.out.println(options);
-        //environment = copyEnvironment(environment);
  
         //replay
         if(vis){

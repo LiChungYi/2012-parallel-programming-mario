@@ -81,8 +81,8 @@ public void collideCheck()
             {
                 world.mario.stomp(this);
                 dead = true;
-                ++LevelScene.killedCreaturesTotal;
-                ++LevelScene.killedCreaturesByStomp;
+                ++world.killedCreaturesTotal;
+                ++world.killedCreaturesByStomp;
 
                 xa = 0;
                 ya = 1;

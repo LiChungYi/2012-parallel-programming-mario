@@ -93,10 +93,10 @@ private int levelType;
 private int levelDifficulty;
 private int levelLength;
 private int levelHeight;
-public static int killedCreaturesTotal;
-public static int killedCreaturesByFireBall;
-public static int killedCreaturesByStomp;
-public static int killedCreaturesByShell;
+public int killedCreaturesTotal;
+public int killedCreaturesByFireBall;
+public int killedCreaturesByStomp;
+public int killedCreaturesByShell;
 
 private Replayer replayer;
 
