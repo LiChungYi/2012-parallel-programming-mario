@@ -18,8 +18,9 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
+import java.util.Random;
 
-public class ShikTask implements Task
+public class ShikTask3 implements Task
 {
 protected Environment environment;
 private Agent agent;
@@ -30,19 +31,15 @@ boolean vis;
 boolean[][] solution;
 // LEFT,RIGHT,DOWN,JUMP,SPEED,MEOW?
 boolean[][] candidateActions = {
-	//{false,true ,false,false ,true ,false},
-	//{false,true ,false,true ,true ,false},
 	{false,true ,false,false,true ,false},
-	{false,false,false,true ,false,false}
-	//{false,true ,false,true ,true ,false},
-	//{false,true ,false,true ,false,false},
-	//{false,true ,false,false,true ,false},
-	//{false,false,false,true ,true ,false}};
+	{false,false,false,true ,false,false},
+	{false,true ,false,true ,true ,false},
 };
+Random randomGenerator = new Random(514);
 
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 
-public ShikTask(MarioAIOptions marioAIOptions)
+public ShikTask3(MarioAIOptions marioAIOptions)
 {
 	environment = new MarioEnvironment();
 	vis = marioAIOptions.getParameterValue("-vis").equals("on");
@@ -66,36 +63,65 @@ Environment copy(Environment src){
     return dest;
 }
 
-private boolean dfs(int lv, float far, int cnt, Environment env){
+boolean checkSolvable( Environment env ) {
+	byte[][] levelScene = env.getLevelSceneObservationZ(2);
+	for ( int i=0; i<levelScene.length; i++ ) {
+		for ( int j=0; j<levelScene[i].length; j++ ) {
+			if ( levelScene[i][j] == 2 ) levelScene[i][j] = 0;
+			if ( levelScene[i][j] == -60 ) levelScene[i][j] = 1;
+		}
+	}
+	int n = levelScene.length, mx = env.getMarioEgoPos()[0], my = env.getMarioEgoPos()[1];
+	for ( int i=n-2; i>=my; i-- ) {
+		for ( int j=1; j<n; j++ ) {
+			if ( levelScene[j][i]==1 || (levelScene[j-1][i]==1 && levelScene[j][i+1]==1) ) levelScene[j][i] = 1;
+			else levelScene[j][i] = 0;
+		}
+	}
+	/*
+	for ( int i=0; i<levelScene.length; i++ ) {
+		for ( int j=0; j<levelScene[i].length; j++ ) {
+			System.err.printf("%3d ",(int)levelScene[i][j]);
+		}
+		System.err.printf("\n");
+	}
+	*/
+	return levelScene[mx][my]==0;
+}
+private boolean dfs(int lv, Environment env){
 	float nowX = env.getMarioFloatPos()[0];
-	//System.err.println(lv + "," + far + "," + cnt + " : " + nowX);
-	System.err.printf("%d: far=%.2f, cnt=%d, nowX=%.2f\n",lv,far,cnt,nowX);
-    if ( env.getMarioStatus() == Mario.STATUS_DEAD ) return false;
-    if ( env.getEvaluationInfo().marioMode != 2 ) return false;
+	System.err.printf("%d: nowX=%.2f\n",lv,nowX);
+	if ( !checkSolvable(env) ) return false;
     if ( env.isLevelFinished() ) {
 		solution = new boolean[lv][Environment.numberOfKeys];
 		return true;
 	}
-	if ( nowX > far ) {
-		cnt = 0;
-		far = nowX;
-	} else {
-		cnt = cnt + 1;
-	}
-	if ( cnt>3 ) return false;
-	int actionCount = 0;
-	for ( boolean act[] : candidateActions ) {
-		if ( !env.isMarioAbleToShoot() && !env.isMarioOnGround() && act[Mario.KEY_SPEED] ) continue; 
-		actionCount += 1;
-	}
-	for ( boolean act[] : candidateActions ) {
-		if ( !env.isMarioAbleToShoot() && !env.isMarioOnGround() && act[Mario.KEY_SPEED] ) continue; 
-		actionCount -= 1;
-		Environment nextEnv = actionCount>0 ? copy(env) : env;
-		nextEnv.tick();
-		nextEnv.performAction(act);
-		if ( dfs(lv+1,far,cnt,nextEnv) ) {
-			solution[lv] = act;
+	for ( int i=0; i<20||lv==0; i++ ) {
+		Environment nextEnv = copy(env);
+		ArrayList<boolean[]> acts = new ArrayList<boolean[]>();
+		boolean bye = false;
+		int sumWeight = 0;
+		int[] probWeight = new int[candidateActions.length];
+		for ( int j=0; j<candidateActions.length; j++ ) {
+			probWeight[j] = 1<<randomGenerator.nextInt(6);
+			sumWeight += probWeight[j];
+		}
+		for ( int j=0; j<20 && !bye; j++ ) {
+			int actionSeed = randomGenerator.nextInt(sumWeight), actionID = 0, nowWeight = 0;
+			while ( actionSeed >= nowWeight + probWeight[actionID] ) {
+				nowWeight += probWeight[actionID];
+				actionID += 1;
+			}
+			acts.add(candidateActions[actionID]);
+			nextEnv.tick();
+			nextEnv.performAction(candidateActions[actionID]);
+			if ( nextEnv.getMarioStatus() == Mario.STATUS_DEAD ) bye = true;
+			if ( nextEnv.getEvaluationInfo().marioMode != 2 ) bye = true;
+		}
+		if ( nextEnv.getMarioFloatPos()[0]<=nowX ) bye = true;
+		if ( bye ) continue;
+		if ( dfs(lv+acts.size(),nextEnv) ) {
+			for ( int j=0; j<acts.size(); j++ ) solution[lv+j] = acts.get(j);
 			return true;
 		}
 	}
@@ -112,7 +138,7 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
         this.reset();
-		dfs(0,0,0,copy(environment));
+		dfs(0,copy(environment));
         //replay
         if(vis) {
 			options.setVisualization(vis);

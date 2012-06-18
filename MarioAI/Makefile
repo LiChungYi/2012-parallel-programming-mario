@@ -1,4 +1,5 @@
 all:
+	rm -rf bin
 	rm -f sources_list.txt
 	find ./src -name "*.java" > sources_list.txt
 	-mkdir bin
