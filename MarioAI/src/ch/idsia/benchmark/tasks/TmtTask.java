@@ -310,6 +310,7 @@ void go(int lev, ArrayList<boolean[]> nowPath, Environment nowEnv) {
 		Environment nxtEnv = copy(nowEnv);
 		
 		int curPathSize = nowPath.size();
+		int dangerous = 0;
 		for (int j = 0; j < p.get(i).size(); j++) {
 			nowPath.add(p.get(i).get(j));
 			nxtEnv.performAction(p.get(i).get(j));
@@ -319,10 +320,12 @@ void go(int lev, ArrayList<boolean[]> nowPath, Environment nowEnv) {
 			int nxtYint = (int)nxtEnv.getMarioFloatPos()[1];
 			if (nxtXint < searchPath.length && nxtXint >= 0 && nxtYint < searchPath[0].length && nxtYint >= 0) {
 				searchPath[nxtXint][nxtYint]++;
+				if (searchPath[nxtXint][nxtYint] > 50) dangerous++;
 			}
 		}
 		
-		go(lev+1, nowPath, nxtEnv);
+		if (dangerous < 10) go(lev+1, nowPath, nxtEnv);
+
 		for (int j = 0; j < p.get(i).size(); j++) {
 			nowPath.remove(nowPath.size()-1);
 		}
@@ -476,6 +479,7 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 		ArrayList<boolean[]> result = solve(copy(environment));
 
 		dumpPath(result);
+		dumpSearchPath();
 
 		//replay
         if(vis) {
@@ -491,8 +495,6 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
         environment.getEvaluationInfo().setTaskName(name);
         this.evaluationInfo = environment.getEvaluationInfo().clone();
     }
-
-	dumpSearchPath();
 
     return true;
 }
