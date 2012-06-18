@@ -107,7 +107,8 @@ private static final String[] allowed = new String[]{
         "-w", //wind
         "-ice", //ice
         "-ex", //exitX
-        "-ey" //exitY
+        "-ey", //exitY
+		"-showSearchPath" //show search path file in "searchpath"
 };
 
 public ParameterContainer()
@@ -293,6 +294,7 @@ public static void InitDefaults()
         defaultOptionsHashMap.put("-ey", "0"); //exit x
         defaultOptionsHashMap.put("-ex", "0"); //exit y
         defaultOptionsHashMap.put("-punj", "off"); //exit y
+		defaultOptionsHashMap.put("-showSearchPath", "off");
     }
 }
 

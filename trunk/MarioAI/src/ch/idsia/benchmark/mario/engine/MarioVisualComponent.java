@@ -46,6 +46,13 @@ import java.awt.image.VolatileImage;
 import java.text.DecimalFormat;
 import java.util.List;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+
 
 /**
  * Created by IntelliJ IDEA. User: Sergey Karakovskiy, sergey at idsia dot ch Date: Feb 26, 2010 Time: 3:54:52 PM
@@ -86,6 +93,8 @@ private static MarioVisualComponent marioVisualComponent = null;
 
 private Scale2x scale2x = new Scale2x(320, 240);
 
+private int[][] searchedPath = null;
+
 private MarioVisualComponent(MarioAIOptions marioAIOptions, MarioEnvironment marioEnvironment)
 {
     this.marioEnvironment = marioEnvironment;
@@ -124,6 +133,15 @@ private MarioVisualComponent(MarioAIOptions marioAIOptions, MarioEnvironment mar
             this.gameViewer.setVisible(true);
         }
     }
+
+	if (marioAIOptions.isShowingSearchedPath()) {
+		try{
+	    ObjectInputStream in = new ObjectInputStream(new FileInputStream("searchpath"));
+	    searchedPath = (int[][])in.readObject();
+		}catch(Exception e){
+	    e.printStackTrace();
+		}
+	}
 }
 
 public static MarioVisualComponent getInstance(MarioAIOptions marioAIOptions, MarioEnvironment marioEnvironment)
@@ -272,14 +290,33 @@ public void render(Graphics g)
     layer.setCam(xCam, yCam);
     layer.render(g, marioEnvironment.getTick() /*levelScene.paused ? 0 : */);
 
+	if(searchedPath != null) {
+		for (int xofs = 0; xofs < 320; xofs++) {
+			for (int yofs = 0; yofs < 240; yofs++) {
+				if (xofs+xCam>=0 && xofs+xCam<searchedPath.length &&
+					yofs+yCam>=0 && yofs+yCam<searchedPath[0].length && searchedPath[xofs+xCam][yofs+yCam] > 0) {
+					g.setColor(Color.RED);
+					int v = searchedPath[xofs+xCam][yofs+yCam];
+					if (v > 10)
+						g.fillOval(xofs, yofs, 2, 2);
+					else
+						g.drawOval(xofs, yofs, 2, 2);
+				}
+			}
+		}
+	}
+
     g.translate(-xCam, -yCam);
 
     for (Sprite sprite : marioEnvironment.getSprites())  // Mario, creatures
         if (sprite.layer == 1) sprite.render(g);
 
     g.translate(xCam, yCam);
+
+
     g.setColor(Color.BLACK);
     //layer.renderExit(g, marioEnvironment.getTick());
+	//
 
     drawStringDropShadow(g, "DIFFICULTY: " + df.format(marioEnvironment.getLevelDifficulty()), 0, 0, marioEnvironment.getLevelDifficulty() > 6 ? 1 : marioEnvironment.getLevelDifficulty() > 2 ? 4 : 7);
 //    drawStringDropShadow(g, "CREATURES:" + (mario.levelScene.paused ? "OFF" : " ON"), 19, 0, 7);
