@@ -46,6 +46,7 @@ import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -119,14 +120,14 @@ class Simulator extends Thread{
 }
 
 class SimulatorManager extends Thread{
-	final static int MAX = 10, THD_MAX = 16;
+	final static int MAX = 10, THD_MAX = 8;
 	public boolean solved;
 	Queue<Simulator> queue;
 	Simulator[] simulators;
 	Simulator result;
 	
 	public SimulatorManager(){
-		queue = new LinkedList<Simulator>();
+		queue = new LinkedBlockingQueue<Simulator>();
 		solved = false;
 		simulators = new Simulator[THD_MAX];
 	}
@@ -157,6 +158,7 @@ class SimulatorManager extends Thread{
 
 public IanchouParallelTask(MarioAIOptions marioAIOptions)
 {
+	System.err.println("Thread number: " + SimulatorManager.THD_MAX);
 	environment = new MarioEnvironment();
 	vis = marioAIOptions.getParameterValue("-vis").equals("on");
 	marioAIOptions.setVisualization(false); //can't be true...
