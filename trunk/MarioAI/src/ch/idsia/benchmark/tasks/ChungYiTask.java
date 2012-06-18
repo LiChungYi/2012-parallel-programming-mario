@@ -286,11 +286,11 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    }
 	    EnvironmentGenerator gen = new EnvironmentGenerator(environmentPath.lastElement());
 
+	    System.out.println("sure Path Len = " + surePathGivenEnvironment.size() + ", targetLen = " + targetLen);
 	    int maxIter = stuck == 0? 300: Integer.MAX_VALUE;
 	    int iter;
 	    for(iter = 0; iter < maxIter; ++iter){
 //		    System.out.println("iter" + iter);
-		    System.out.println("sure Path Len = " + surePathGivenEnvironment.size() + ", targetLen = " + targetLen);
 		    myAssert(surePathGivenEnvironment.size() == environmentPath.size()-1);
 
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
