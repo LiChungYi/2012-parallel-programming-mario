@@ -111,7 +111,7 @@ public ChungYiTask(MarioAIOptions marioAIOptions)
  * @return boolean flag whether controller is disqualified or not
  */
     class OperationCode{
-    	int jumpOp, speedOp, rightOp;
+    	int jumpOp, speedOp, rightOp, leftNum = 0;
 	OperationCode(){
 		jumpOp = -1;	//0, 1: short jump, 2: long jump
 		speedOp = -1;	//0, 1
@@ -128,29 +128,42 @@ public ChungYiTask(MarioAIOptions marioAIOptions)
 				if(r.nextInt(5) == 0)
 					rightOp = 2;//right until reach the ground
 			}
+			else{
+				if(r.nextInt(15) == 0){
+					rightOp = 3;//backward
+					leftNum = 7;
+				}	
+			}
 		}
 	}
 	boolean[] getAction(Environment environment){
 		boolean[] action = new boolean[Environment.numberOfKeys];
 
-		if(jumpOp > 0){
+		if(jumpOp == 1 || jumpOp == 2){
 			action[Mario.KEY_JUMP] = true;
 		}
-		if(speedOp > 0){
+		if(speedOp == 1){
 			action[Mario.KEY_SPEED] = true;
 		}
-		if(rightOp > 0){
+		if(rightOp == 1 || rightOp == 2){
 			action[Mario.KEY_RIGHT] = true;
+		}
+		if(rightOp == 3){
+			action[Mario.KEY_LEFT] = true;
+			leftNum -= 1;
 		}
 		if(jumpOp != 2)
 			jumpOp = -1;
 		else if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
 			jumpOp = -1;
 		speedOp = -1;
-		if(rightOp != 2)
+		if(rightOp != 2 && rightOp != 3)
 			rightOp = -1;
 		else if(rightOp == 2 && environment.isMarioOnGround())
 			rightOp = -1;
+		else if(rightOp == 3 && leftNum == 0)
+			rightOp = -1;
+
 		return action;
 	}
     }
@@ -232,13 +245,14 @@ void myAssert(boolean s){
 	}
 }
 
+static final int nSolution = 100, targetLenStep = 5, nSolutionForAcceptableDecrease = 5;
+int acceptableFitnessDecrease = 20;
+static final int backTrack_nOperation = 40;
+static final int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 400, FITNESS_BIG_MARIO = 200, FITNESS_SMALL_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
+
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {
-
-    int nSolution = 100, targetLen = 5, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
-    int backTrack_nOperation = 40;
-    int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 200, FITNESS_BIG_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
-
+    int targetLen = targetLenStep;
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
     Vector<Environment> environmentPath = new Vector<Environment>();
     Vector<boolean[]> surePathGivenEnvironment = new Vector<boolean[]>();
@@ -275,12 +289,14 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    int maxIter = stuck == 0? 300: Integer.MAX_VALUE;
 	    int iter;
 	    for(iter = 0; iter < maxIter; ++iter){
-		    System.out.println("iter" + iter);
-		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size() + " targetLen" + targetLen);
+//		    System.out.println("iter" + iter);
+//		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size() + " targetLen" + targetLen);
 		    myAssert(surePathGivenEnvironment.size() == environmentPath.size()-1);
 
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
 
+		    if(evaluationInfo.marioMode == 0)//
+			    fitness[foundSol] += FITNESS_SMALL_MARIO;
 		    if(evaluationInfo.marioMode == 1)//big, no fire
 			    fitness[foundSol] += FITNESS_BIG_MARIO;
 		    if(evaluationInfo.marioMode == 2)//fire
@@ -292,10 +308,10 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		    if(evaluationInfo.marioStatus == Mario.STATUS_WIN)
 			    fitness[foundSol] += FITNESS_WIN;
 
-		    System.out.println("futurePath [" + foundSol + "] length = " + futurePathList.get(foundSol).size() + ", fitness = " + fitness[foundSol]);
+//		    System.out.println("futurePath [" + foundSol + "] length = " + futurePathList.get(foundSol).size() + ", fitness = " + fitness[foundSol]);
 
 		    if(evaluationInfo.marioStatus == Mario.STATUS_RUNNING || evaluationInfo.marioStatus == Mario.STATUS_WIN){
-			    if(lastFitness-fitness[foundSol] < acceptableFitnessDecrease)
+			    if(lastFitness-fitness[foundSol] < acceptableFitnessDecrease)	//useless for last partition
 				    ++foundAcceptableSol;
 			    ++foundSol;
 		    }

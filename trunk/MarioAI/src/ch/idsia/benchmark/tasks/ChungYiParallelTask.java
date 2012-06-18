@@ -111,7 +111,7 @@ public ChungYiParallelTask(MarioAIOptions marioAIOptions)
  * @return boolean flag whether controller is disqualified or not
  */
     class OperationCode{
-    	int jumpOp, speedOp, rightOp;
+    	int jumpOp, speedOp, rightOp, leftNum = 0;
 	OperationCode(){
 		jumpOp = -1;	//0, 1: short jump, 2: long jump
 		speedOp = -1;	//0, 1
@@ -128,29 +128,42 @@ public ChungYiParallelTask(MarioAIOptions marioAIOptions)
 				if(r.nextInt(5) == 0)
 					rightOp = 2;//right until reach the ground
 			}
+			else{
+				if(r.nextInt(15) == 0){
+					rightOp = 3;//backward
+					leftNum = 7;
+				}	
+			}
 		}
 	}
 	boolean[] getAction(Environment environment){
 		boolean[] action = new boolean[Environment.numberOfKeys];
 
-		if(jumpOp > 0){
+		if(jumpOp == 1 || jumpOp == 2){
 			action[Mario.KEY_JUMP] = true;
 		}
-		if(speedOp > 0){
+		if(speedOp == 1){
 			action[Mario.KEY_SPEED] = true;
 		}
-		if(rightOp > 0){
+		if(rightOp == 1 || rightOp == 2){
 			action[Mario.KEY_RIGHT] = true;
+		}
+		if(rightOp == 3){
+			action[Mario.KEY_LEFT] = true;
+			leftNum -= 1;
 		}
 		if(jumpOp != 2)
 			jumpOp = -1;
 		else if(jumpOp == 2 && environment.isMarioOnGround())//long jump, end after on the ground
 			jumpOp = -1;
 		speedOp = -1;
-		if(rightOp != 2)
+		if(rightOp != 2 && rightOp != 3)
 			rightOp = -1;
 		else if(rightOp == 2 && environment.isMarioOnGround())
 			rightOp = -1;
+		else if(rightOp == 3 && leftNum == 0)
+			rightOp = -1;
+
 		return action;
 	}
     }
@@ -253,7 +266,7 @@ class ResultFromWorkers{
 		futurePathList.set(foundSol, aFuturePath);
 		++foundSol;	
 		
-		if(lastFitness - f < ChungYiParallelTask.acceptableFitnessDecrease)
+		if(lastFitness - f < acceptableFitnessDecrease)	//useless for last partition
 			++foundAcceptableSol;
 		return true;
 	}
@@ -300,6 +313,8 @@ class ParallelWorker implements Runnable{
 
 			int fitness = 0;
 
+			if(evaluationInfo.marioMode == 0)//small
+				fitness += FITNESS_SMALL_MARIO;
 			if(evaluationInfo.marioMode == 1)//big, no fire
 				fitness += FITNESS_BIG_MARIO;
 			if(evaluationInfo.marioMode == 2)//fire
@@ -320,9 +335,10 @@ class ParallelWorker implements Runnable{
 	}
 }
 
-static final int nSolution = 100, targetLenStep = 5, acceptableFitnessDecrease = 10, nSolutionForAcceptableDecrease = 5;
-static final int backTrack_nOperation = 15;
-static final int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 200, FITNESS_BIG_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
+static final int nSolution = 100, targetLenStep = 5, nSolutionForAcceptableDecrease = 5;
+int acceptableFitnessDecrease = 20;
+static final int backTrack_nOperation = 40;
+static final int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 400, FITNESS_BIG_MARIO = 200, FITNESS_SMALL_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
 static final int nWorker = 4;
 
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
@@ -366,6 +382,8 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 		   worker[i] = new Thread(new ParallelWorker(i, randomList[i], gen, (maxIter/nWorker)+1, targetLen, resultFromWorkers)); 
 		   worker[i].start();
 	    }
+
+	    System.out.println("sure Path Len = " + surePathGivenEnvironment.size() + ", targetLen = " + targetLen);
 	    
 	    //busy check if enough solution
 	    for(int i = 0; i < nWorker; ++i){
