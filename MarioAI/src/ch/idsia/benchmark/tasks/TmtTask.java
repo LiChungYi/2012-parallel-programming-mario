@@ -66,6 +66,7 @@ private EvaluationInfo evaluationInfo;
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 boolean vis;
 Random random = new Random(0);
+int[][] searchPath;
 
 public TmtTask(MarioAIOptions marioAIOptions)
 {
@@ -89,6 +90,21 @@ Environment copy(Environment src){
     	e.printStackTrace();
     }	
     return dest;
+}
+
+void dumpSearchPath(){
+
+	try{
+		FileOutputStream fos = new FileOutputStream("searchpath");
+		ObjectOutputStream oos = new ObjectOutputStream(fos);
+		oos.writeObject(searchPath);
+		oos.flush();
+		oos.close();
+		System.err.println("Dump Search Path OK!");
+	}
+	catch(Exception e){
+		e.printStackTrace();
+	}
 }
 
 void dumpPath(ArrayList<boolean[]> surePathGivenEnvironment){
@@ -202,6 +218,7 @@ int testFitness(ArrayList<boolean[]> testPath, Environment copyEnv) {
 void go(int lev, ArrayList<boolean[]> nowPath, Environment nowEnv) {
 	
 	if (lev == limitDfsDepth) return;
+	if (lev > 0 && nowPath.size() - mDfsPath.get(0).size() >= MAGICLENGTH) return;
 
 	mDfsPath.set(lev, (ArrayList) nowPath.clone());
 	mDfsEnv[lev] = copy(nowEnv);
@@ -214,8 +231,6 @@ void go(int lev, ArrayList<boolean[]> nowPath, Environment nowEnv) {
 
 	int state[] = nowEnv.getMarioState();
 	int nowFitness = mDfsFitness[lev];
-
-	if (nowPath.size() - mDfsPath.get(0).size() >= MAGICLENGTH) return;
 
 	if (lev >= TRACEBACK && nowFitness > mDfsFitness[lev - TRACEBACK] + TRACECRITERIA) {
 		int prevXint = (int)(mDfsEnv[lev- TRACEBACK].getMarioFloatPos()[0]);
@@ -299,6 +314,12 @@ void go(int lev, ArrayList<boolean[]> nowPath, Environment nowEnv) {
 			nowPath.add(p.get(i).get(j));
 			nxtEnv.performAction(p.get(i).get(j));
 			nxtEnv.tick();
+			
+			int nxtXint = (int)nxtEnv.getMarioFloatPos()[0];
+			int nxtYint = (int)nxtEnv.getMarioFloatPos()[1];
+			if (nxtXint < searchPath.length && nxtXint >= 0 && nxtYint < searchPath[0].length && nxtYint >= 0) {
+				searchPath[nxtXint][nxtYint]++;
+			}
 		}
 		
 		go(lev+1, nowPath, nxtEnv);
@@ -343,7 +364,7 @@ ArrayList<boolean[]> solve(Environment env) {
 	candidateEnvironments.add(env);
 	
 
-	
+	int rep = 1;	
 	for (now = 0.0f; !solved && !candidatePaths.isEmpty(); now += searchFrameLength) {
 		System.err.println("Starting Search at " + now + "; num of path = " + candidatePaths.size());
 		ArrayList<ArrayList<boolean[]> > tmpPaths = new ArrayList<ArrayList<boolean[]> >();
@@ -371,7 +392,8 @@ ArrayList<boolean[]> solve(Environment env) {
 			now -= searchFrameLength;
 			if (now < 0) now = 0;
 
-			if (MAGICLENGTH >= 150) {
+			if (MAGICLENGTH >= 150*rep) {
+				rep++;
 				//force back
 				for (int i=0;i<candidatePaths.size();i++) {
 					ArrayList<boolean[]> nowPath = candidatePaths.get(i);
@@ -393,8 +415,9 @@ ArrayList<boolean[]> solve(Environment env) {
 			continue;
 		}
 
+		rep = 1;
 		dfsOkToShrink = false;
-		MAGICLENGTH = 95;
+		MAGICLENGTH = 58;
 
 		int[] fitness = new int[oP.size()];
 		boolean[] used = new boolean[oP.size()];
@@ -432,6 +455,8 @@ ArrayList<boolean[]> solve(Environment env) {
 	return null;
 }
 
+
+
 /**
  * @param repetitionsOfSingleEpisode
  * @return boolean flag whether controller is disqualified or not
@@ -439,6 +464,12 @@ ArrayList<boolean[]> solve(Environment env) {
 public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 {
     long c = System.currentTimeMillis();
+
+	searchPath = new int[4096][256];
+	for (int i = 0; i < 4096; i++)
+		for(int j=0;j<256;j++)
+			searchPath[i][j] = 0;
+
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
         this.reset();
@@ -460,6 +491,8 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
         environment.getEvaluationInfo().setTaskName(name);
         this.evaluationInfo = environment.getEvaluationInfo().clone();
     }
+
+	dumpSearchPath();
 
     return true;
 }

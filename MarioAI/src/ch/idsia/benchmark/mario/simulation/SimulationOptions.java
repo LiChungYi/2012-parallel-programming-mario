@@ -509,4 +509,13 @@ public boolean isPunj()
 {
     return b(getParameterValue("-punj"));
 }
+
+/**
+ * @return true if -showSearchPath
+ */
+public boolean isShowingSearchedPath()
+{
+	return b(getParameterValue("-showSearchPath"));
+}
+
 }
