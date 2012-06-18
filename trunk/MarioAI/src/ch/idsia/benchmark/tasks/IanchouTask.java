@@ -122,6 +122,12 @@ private List<boolean[]> simulate(Environment environment, int[] seq, int len){
 	Agent agent[] = new Agent[2];
 	agent[0] = new ForwardAgent();
 	agent[1] = new ScaredShooty();
+	for(int i=0;i<2;++i){
+	    agent[i].setObservationDetails(environment.getReceptiveFieldWidth(),
+	            environment.getReceptiveFieldHeight(),
+	            environment.getMarioEgoPos()[0],
+	            environment.getMarioEgoPos()[1]);
+	}
 	int now=1, index=0;
 
     for(int i=0;i<len && environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode()==2; ++i){
