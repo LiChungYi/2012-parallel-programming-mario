@@ -34,6 +34,7 @@ import ch.idsia.benchmark.tasks.IanchouTask;
 import ch.idsia.benchmark.tasks.OurReplayTask;
 import ch.idsia.benchmark.tasks.ChungYiParallelTask;
 import ch.idsia.benchmark.tasks.ShikTask;
+import ch.idsia.benchmark.tasks.TmtTask;
 import ch.idsia.benchmark.tasks.ShikTask2;
 import ch.idsia.benchmark.tasks.ShikTask3;
 import ch.idsia.benchmark.tasks.LearningTask;
@@ -70,7 +71,9 @@ public static void main(String[] args)
 		basicTask = new LearningTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("ChungYiParallel"))
     	basicTask = new ChungYiParallelTask(marioAIOptions);
-    else
+    else if(marioAIOptions.getTask().equals("tmt"))
+		basicTask = new TmtTask(marioAIOptions);
+	else
     	basicTask = new BasicTask(marioAIOptions);
      
 //    final BasicTaskClean basicTask = new BasicTaskClean(marioAIOptions);
