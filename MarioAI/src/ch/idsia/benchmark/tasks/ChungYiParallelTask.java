@@ -325,6 +325,9 @@ class ParallelWorker implements Runnable{
 
 			if(evaluationInfo.marioStatus == Mario.STATUS_WIN)
 				fitness += FITNESS_WIN;
+			
+			if(resultFromWorkers.isFinished())
+				break;
 
 			if(evaluationInfo.marioStatus == Mario.STATUS_RUNNING || evaluationInfo.marioStatus == Mario.STATUS_WIN){
 				if(!resultFromWorkers.writeResult(fitness, aFuturePath))
@@ -339,7 +342,7 @@ static final int nSolution = 100, targetLenStep = 5, nSolutionForAcceptableDecre
 int acceptableFitnessDecrease = 20;
 static final int backTrack_nOperation = 40;
 static final int FITNESS_WIN = 10000, FITNESS_FIRE_MARIO = 400, FITNESS_BIG_MARIO = 200, FITNESS_SMALL_MARIO = 100; //fitness = FITNESS_WIN + time * (FITNESS_FIRE_MARIO or FITNESS_BIG_MARIO)
-static final int nWorker = 4;
+static final int nWorker = 10;
 
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {

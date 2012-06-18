@@ -290,7 +290,7 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    int iter;
 	    for(iter = 0; iter < maxIter; ++iter){
 //		    System.out.println("iter" + iter);
-//		    System.out.println("surePathGivenEnvironment length = " + surePathGivenEnvironment.size() + " targetLen" + targetLen);
+		    System.out.println("sure Path Len = " + surePathGivenEnvironment.size() + ", targetLen = " + targetLen);
 		    myAssert(surePathGivenEnvironment.size() == environmentPath.size()-1);
 
 		    EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), futurePathList.get(foundSol), random, targetLen); 
