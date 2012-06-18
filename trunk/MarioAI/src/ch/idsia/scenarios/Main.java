@@ -35,7 +35,6 @@ import ch.idsia.benchmark.tasks.OurReplayTask;
 import ch.idsia.benchmark.tasks.ChungYiParallelTask;
 import ch.idsia.benchmark.tasks.ShikTask;
 import ch.idsia.benchmark.tasks.TmtTask;
-import ch.idsia.benchmark.tasks.ShikTask2;
 import ch.idsia.benchmark.tasks.ShikTask3;
 import ch.idsia.benchmark.tasks.LearningTask;
 import ch.idsia.benchmark.tasks.Task;
@@ -63,8 +62,6 @@ public static void main(String[] args)
     	basicTask = new OurReplayTask(marioAIOptions);
     else if(marioAIOptions.getTask().equals("shik"))
     	basicTask = new ShikTask(marioAIOptions);
-    else if(marioAIOptions.getTask().equals("shik2"))
-		basicTask = new ShikTask2(marioAIOptions);
     else if(marioAIOptions.getTask().equals("shik3"))
 		basicTask = new ShikTask3(marioAIOptions);
     else if(marioAIOptions.getTask().equals("learn"))
