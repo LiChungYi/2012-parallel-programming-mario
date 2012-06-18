@@ -62,6 +62,36 @@ Environment copy(Environment src){
     }	
     return dest;
 }
+public class EnvironmentGenerator{
+	byte[] theByteData;
+	EnvironmentGenerator(Environment src){
+		try{
+			ByteArrayOutputStream bos;      
+			bos = new ByteArrayOutputStream();
+			ObjectOutputStream oos = new ObjectOutputStream(bos);
+			oos.writeObject(src);
+			oos.flush();
+			oos.close();
+
+			theByteData = bos.toByteArray();
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}       
+	}       
+	Environment copyEnvironment(){
+		Environment dest = null;
+		try{
+			ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(theByteData));
+			dest = (Environment)in.readObject();
+			in.close();
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		return dest;
+	}
+}
 
 boolean checkSolvable( Environment env ) {
 	byte[][] levelScene = env.getLevelSceneObservationZ(2);
@@ -96,8 +126,9 @@ private boolean dfs(int lv, Environment env){
 		solution = new boolean[lv][Environment.numberOfKeys];
 		return true;
 	}
+	EnvironmentGenerator envGen = new EnvironmentGenerator(env);
 	for ( int i=0; i<20||lv==0; i++ ) {
-		Environment nextEnv = copy(env);
+		Environment nextEnv = i==19 ? env : envGen.copyEnvironment();
 		ArrayList<boolean[]> acts = new ArrayList<boolean[]>();
 		boolean bye = false;
 		int sumWeight = 0;
