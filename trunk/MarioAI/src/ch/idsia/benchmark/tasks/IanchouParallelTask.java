@@ -71,6 +71,24 @@ boolean vis;
 
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 
+
+int[][] searchPath;
+	void dumpSearchPath(){
+
+	try{
+		FileOutputStream fos = new FileOutputStream("searchpath");
+		ObjectOutputStream oos = new ObjectOutputStream(fos);
+		oos.writeObject(searchPath);
+		oos.flush();
+		oos.close();
+		System.err.println("Dump Search Path OK!");
+	}
+	catch(Exception e){
+		e.printStackTrace();
+	}
+	}
+
+
 class Simulator extends Thread{
 	boolean done = false, solved=false;
 	Environment environment;
@@ -78,12 +96,16 @@ class Simulator extends Thread{
 	int len, head;
 	Agent[] agent;
 	List<boolean[]> trace;
+	int mThreadID = 0;
 
 	public Simulator(Environment environment, int[] seq, int head, int len){
 		this.environment = environment;
 		this.head = head;
 		this.seq = seq;
 		this.len = len;
+	}
+	public void setThreadID(int id) {
+		mThreadID = id;
 	}
 
 	public void run(){
@@ -99,6 +121,8 @@ class Simulator extends Thread{
 		}
 		int now=1, index=0;
 
+		int lastXint = (int)environment.getMarioFloatPos()[0], lastYint = (int)environment.getMarioFloatPos()[1];
+
 	    for(int i=0;i<len && environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode()==2; ++i){
 	    	if(index<seq.length && i==seq[index]){
 	    		now = 1-now;
@@ -110,6 +134,24 @@ class Simulator extends Thread{
 	    	trace.add(action.clone());
 	    	environment.performAction(action);
 	    	environment.tick();
+
+			int nxtXint = (int)environment.getMarioFloatPos()[0];
+			int nxtYint = (int)environment.getMarioFloatPos()[1];
+			if (lastXint >= 0 && lastYint >= 0) {
+			int xdif = nxtXint - lastXint; xdif = xdif>0? xdif: -xdif;
+			int ydif = nxtYint - lastYint; ydif = ydif>0? ydif: -ydif;
+			float lim = (xdif>ydif? xdif: ydif), ratio = 1f/lim;
+			for(float t = ratio; t <= 1.0; t+= ratio) {
+				int xx = (int)(lastXint + (nxtXint-lastXint)*t);
+				int yy = (int)(lastYint + (nxtYint-lastYint)*t);
+				if (xx < searchPath.length && xx >= 0 && yy < searchPath[0].length && yy >= 0) {
+					int v = (mThreadID<<8) + (((searchPath[xx][yy]&255)+1)&255);
+					searchPath[xx][yy] = v;
+				}
+			}
+			}
+			lastXint = nxtXint; lastYint = nxtYint;
+
 	    }
 
 	    if(environment.getMarioStatus()!= Mario.STATUS_DEAD && environment.getMarioMode()==2)
@@ -148,6 +190,7 @@ class SimulatorManager extends Thread{
 							if(solved)
 								return;
 						simulators[i] = queue.poll();
+						simulators[i].setThreadID(i);
 						simulators[i].start();
 					}
 				}
@@ -194,12 +237,35 @@ Environment get(byte[] src){
 
 void update(int x, List<boolean[]> trace, List<byte[]> env){
 	environment = get(env.get(x));
+
+	int lastXint = (int)environment.getMarioFloatPos()[0], lastYint = (int)environment.getMarioFloatPos()[1];
     for(int i=x;i<trace.size();++i){
     	if(environment.isLevelFinished()){
     		System.err.println("you got trouble!");
     	}
     	environment.performAction(trace.get(i));
     	environment.tick();
+
+		// add search path
+			int nxtXint = (int)environment.getMarioFloatPos()[0];
+			int nxtYint = (int)environment.getMarioFloatPos()[1];
+			if (lastXint >= 0 && lastYint >= 0) {
+			int xdif = nxtXint - lastXint; xdif = xdif>0? xdif: -xdif;
+			int ydif = nxtYint - lastYint; ydif = ydif>0? ydif: -ydif;
+			float lim = (xdif>ydif? xdif: ydif), ratio = 1f/lim;
+			for(float t = ratio; t <= 1.0; t+= ratio) {
+				int xx = (int)(lastXint + (nxtXint-lastXint)*t);
+				int yy = (int)(lastYint + (nxtYint-lastYint)*t);
+				if (xx < searchPath.length && xx >= 0 && yy < searchPath[0].length && yy >= 0) {
+					int v = 0 + (((searchPath[xx][yy]&255)+1)&255);
+					searchPath[xx][yy] = v;
+				}
+			}
+			}
+			lastXint = nxtXint; lastYint = nxtYint;
+			//
+
+
     	if(i+1 < trace.size()){
     		env.set(i+1, copy(environment));
     	}
@@ -234,12 +300,43 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 	List<byte[]> env = new ArrayList<byte[]>();
 	SimulatorManager simulatorManager;
 
+
+	searchPath = new int[4096][256];
+	for (int i = 0; i < 4096; i++)
+		for(int j=0;j<256;j++)
+			searchPath[i][j] = 0;
+
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
         this.reset();
         while (!environment.isLevelFinished())
         {
+
+			//record search path
+			int lastXint = (int)environment.getMarioFloatPos()[0], lastYint = (int)environment.getMarioFloatPos()[1];
+			//
+
             environment.tick();
+			
+			//record search path
+			int nxtXint = (int)environment.getMarioFloatPos()[0];
+			int nxtYint = (int)environment.getMarioFloatPos()[1];
+			if (lastXint >= 0 && lastYint >= 0) {
+			int xdif = nxtXint - lastXint; xdif = xdif>0? xdif: -xdif;
+			int ydif = nxtYint - lastYint; ydif = ydif>0? ydif: -ydif;
+			float lim = (xdif>ydif? xdif: ydif), ratio = 1f/lim;
+			for(float t = ratio; t <= 1.0; t+= ratio) {
+				int xx = (int)(lastXint + (nxtXint-lastXint)*t);
+				int yy = (int)(lastYint + (nxtYint-lastYint)*t);
+				if (xx < searchPath.length && xx >= 0 && yy < searchPath[0].length && yy >= 0) {
+					int v = 0 + (((searchPath[xx][yy]&255)+1)&255);
+					searchPath[xx][yy] = v;
+				}
+			}
+			}
+			//
+
+
 
             boolean solved = environment.getMarioMode()==2 && environment.getMarioStatus() != Mario.STATUS_DEAD;
             if(!solved){
@@ -290,7 +387,9 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
                 environment.performAction(action);
             }
         }
- 
+
+		dumpSearchPath();
+	    	
         //replay
         if(vis){
         	options.setVisualization(vis);

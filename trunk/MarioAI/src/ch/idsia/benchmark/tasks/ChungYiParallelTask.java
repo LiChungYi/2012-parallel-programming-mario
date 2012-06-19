@@ -59,6 +59,23 @@ import java.util.Vector;
  */
 
 public class ChungYiParallelTask implements Task{
+	int[][] searchPath;
+	void dumpSearchPath(){
+
+	try{
+		FileOutputStream fos = new FileOutputStream("searchpath");
+		ObjectOutputStream oos = new ObjectOutputStream(fos);
+		oos.writeObject(searchPath);
+		oos.flush();
+		oos.close();
+		System.err.println("Dump Search Path OK!");
+	}
+	catch(Exception e){
+		e.printStackTrace();
+	}
+	}
+
+
 	public class EnvironmentGenerator{
 		byte[] theByteData;
 		EnvironmentGenerator(Environment src){
@@ -168,20 +185,38 @@ public ChungYiParallelTask(MarioAIOptions marioAIOptions)
 	}
     }
 
-public EvaluationInfo runSingleEpisode(Environment environment, final Vector<boolean[]> aFuturePath, Random r, final int length)
+public EvaluationInfo runSingleEpisode(int id, Environment environment, final Vector<boolean[]> aFuturePath, Random r, final int length)
 {
     //long c = System.currentTimeMillis();
 
     OperationCode operationCode = new OperationCode();
     aFuturePath.clear();
+	int lastXint = -1, lastYint = -1;
     while (!environment.isLevelFinished())
     {
 	    operationCode.next(r);
 	    boolean[] action = operationCode.getAction(environment); 
 //	    System.err.println("JUMP " + action[Mario.KEY_JUMP] + ", SPEED " + action[Mario.KEY_SPEED] + ", RIGHT " + action[Mario.KEY_RIGHT]);
 	    aFuturePath.add(action);
-            environment.performAction(action);
+        environment.performAction(action);
 	    environment.tick();
+		
+		int nxtXint = (int)environment.getMarioFloatPos()[0];
+		int nxtYint = (int)environment.getMarioFloatPos()[1];
+		if (lastXint >= 0 && lastYint >= 0) {
+			int xdif = nxtXint - lastXint; xdif = xdif>0? xdif: -xdif;
+			int ydif = nxtYint - lastYint; ydif = ydif>0? ydif: -ydif;
+			float lim = (xdif>ydif? xdif: ydif), ratio = 1f/lim;
+			for(float t = ratio; t <= 1.0; t+= ratio) {
+				int xx = (int)(lastXint + (nxtXint-lastXint)*t);
+				int yy = (int)(lastYint + (nxtYint-lastYint)*t);
+				if (xx < searchPath.length && xx >= 0 && yy < searchPath[0].length && yy >= 0) {
+					int v = (id<<8) + (((searchPath[xx][yy]&255)+1)&255);
+					searchPath[xx][yy] = v;
+				}
+			}
+		}
+		lastXint = nxtXint; lastYint = nxtYint;
 
 	    if(environment.getEvaluationInfo().distancePassedPhys >= 16*length)
 		    break;
@@ -309,7 +344,7 @@ class ParallelWorker implements Runnable{
 	public void run(){
 		for(int i = 0; i < maxIter; ++i){
 			Vector<boolean[]> aFuturePath = new Vector<boolean[]>();
-			EvaluationInfo evaluationInfo = runSingleEpisode(gen.copyEnvironment(), aFuturePath, random, targetLen); 
+			EvaluationInfo evaluationInfo = runSingleEpisode(threadID, gen.copyEnvironment(), aFuturePath, random, targetLen); 
 
 			int fitness = 0;
 
@@ -346,6 +381,14 @@ static final int nWorker = 10;
 
 public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingleEpisode)
 {
+
+	searchPath = new int[4096][256];
+	for (int i = 0; i < 4096; i++)
+		for(int j=0;j<256;j++)
+			searchPath[i][j] = 0;
+
+
+
     int targetLen = targetLenStep;
     //environmentPath.get(i) + surePathGivenEnvironment.get(i) => environmentPath.get(i+1)
     Vector<Environment> environmentPath = new Vector<Environment>();
@@ -424,6 +467,8 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
 	    dumpPath(surePathGivenEnvironment);
 
 	    if(bestFitness >= FITNESS_WIN){
+			dumpSearchPath();
+			
 		    System.out.println("SUCCEED!!!!!!!");
 		    return;
 	    }
