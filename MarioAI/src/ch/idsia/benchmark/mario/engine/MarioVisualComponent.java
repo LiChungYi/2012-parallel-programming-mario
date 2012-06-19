@@ -280,6 +280,43 @@ public void render(Graphics g)
         bgLayer[i].render(g); //levelScene.
     }
 
+
+	if(searchedPath != null) {
+		for (int xofs = 0; xofs < 320; xofs++) {
+			for (int yofs = 0; yofs < 240; yofs++) {
+				if (xofs+xCam>=0 && xofs+xCam<searchedPath.length &&
+					yofs+yCam>=0 && yofs+yCam<searchedPath[0].length && searchedPath[xofs+xCam][yofs+yCam] > 0) {
+					int v = searchedPath[xofs+xCam][yofs+yCam];
+					//int w = v&255;
+					//w = 255-w;
+					int tID = v>>8;
+					if (tID == 0) {
+						g.setColor(Color.RED);
+					} else if (tID == 1) {
+						g.setColor(Color.GREEN);
+					} else if (tID == 2) {
+						g.setColor(Color.BLUE);
+					} else if (tID == 3) {
+						g.setColor(Color.ORANGE);
+					} else if (tID == 4) {
+						g.setColor(Color.MAGENTA);
+					} else if (tID == 5) {
+						g.setColor(Color.CYAN);
+					} else if (tID == 6) {
+						g.setColor(Color.YELLOW);
+					} else {
+						g.setColor(Color.GRAY);
+					}
+					
+					//if (w > 10)
+						g.fillRect(xofs, yofs, 1, 1);
+					//else
+						//g.drawRect(xofs, yofs, 2, 2);
+				}
+			}
+		}
+	}
+
     g.translate(-xCam, -yCam);
 
     for (Sprite sprite : marioEnvironment.getSprites())          // levelScene.
@@ -289,22 +326,6 @@ public void render(Graphics g)
 
     layer.setCam(xCam, yCam);
     layer.render(g, marioEnvironment.getTick() /*levelScene.paused ? 0 : */);
-
-	if(searchedPath != null) {
-		for (int xofs = 0; xofs < 320; xofs++) {
-			for (int yofs = 0; yofs < 240; yofs++) {
-				if (xofs+xCam>=0 && xofs+xCam<searchedPath.length &&
-					yofs+yCam>=0 && yofs+yCam<searchedPath[0].length && searchedPath[xofs+xCam][yofs+yCam] > 0) {
-					g.setColor(Color.RED);
-					int v = searchedPath[xofs+xCam][yofs+yCam];
-					if (v > 10)
-						g.fillOval(xofs, yofs, 2, 2);
-					else
-						g.drawOval(xofs, yofs, 2, 2);
-				}
-			}
-		}
-	}
 
     g.translate(-xCam, -yCam);
 
