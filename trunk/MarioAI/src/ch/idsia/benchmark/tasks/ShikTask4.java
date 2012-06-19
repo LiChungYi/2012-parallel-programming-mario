@@ -39,10 +39,14 @@ Random randomGenerator = new Random(514);
 
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 
+final int NUM_THREAD;
+final String outputFile;
 public ShikTask4(MarioAIOptions marioAIOptions)
 {
 	environment = new MarioEnvironment();
 	vis = marioAIOptions.getParameterValue("-vis").equals("on");
+	NUM_THREAD = marioAIOptions.getNumThreads();
+	outputFile = marioAIOptions.getReplayFile();
 	marioAIOptions.setVisualization(false); //can't be true...
     this.setOptionsAndReset(marioAIOptions);
 }
@@ -129,7 +133,6 @@ class CopyEnvThread extends Thread {
 		env = envGen.copyEnvironment();
 	}
 }
-final int NUM_THREAD = 4;
 private boolean dfs(int lv, Environment env){
 	float nowX = env.getMarioFloatPos()[0];
 	System.err.printf("%d: nowX=%.2f\n",lv,nowX);
@@ -139,11 +142,11 @@ private boolean dfs(int lv, Environment env){
 		return true;
 	}
 	EnvironmentGenerator envGen = new EnvironmentGenerator(env);
-	for ( int i=0; i<20||lv==0; i+=NUM_THREAD ) {
+	for ( int i=0; i<16||lv==0; i+=NUM_THREAD ) {
 		CopyEnvThread[] copyEnvThread = new CopyEnvThread[NUM_THREAD];
 		for ( int t=0; t<NUM_THREAD; t++ ) {
 			copyEnvThread[t] = new CopyEnvThread(envGen);
-			copyEnvThread[t].setPriority(Thread.MAX_PRIORITY-t);
+			//copyEnvThread[t].setPriority(Thread.MAX_PRIORITY);
 			copyEnvThread[t].start();
 		}
 		for ( int t=0; t<NUM_THREAD; t++ ) {
@@ -157,7 +160,7 @@ private boolean dfs(int lv, Environment env){
 				probWeight[j] = 1<<randomGenerator.nextInt(6);
 				sumWeight += probWeight[j];
 			}
-			for ( int j=0; j<20 && !bye; j++ ) {
+			for ( int j=0; j<16 && !bye; j++ ) {
 				int actionSeed = randomGenerator.nextInt(sumWeight), actionID = 0, nowWeight = 0;
 				while ( actionSeed >= nowWeight + probWeight[actionID] ) {
 					nowWeight += probWeight[actionID];
@@ -173,6 +176,7 @@ private boolean dfs(int lv, Environment env){
 			if ( bye ) continue;
 			if ( dfs(lv+acts.size(),nextEnv) ) {
 				for ( int j=0; j<acts.size(); j++ ) solution[lv+j] = acts.get(j);
+				for ( int tt=t+1; tt<NUM_THREAD; tt++ ) copyEnvThread[tt].stop();
 				return true;
 			}
 		}
@@ -202,9 +206,10 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
 			environment.performAction(solution[i]);
 			trace.add(solution[i]);
 		}
+		System.err.printf("core = %d\n",Runtime.getRuntime().availableProcessors());
         //output trace
         try{
-        	FileOutputStream fos = new FileOutputStream("output");
+        	FileOutputStream fos = new FileOutputStream(outputFile);
         	ObjectOutputStream oos = new ObjectOutputStream(fos);
         	oos.writeObject(trace);
         	oos.flush();
