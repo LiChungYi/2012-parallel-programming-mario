@@ -136,7 +136,7 @@ private MarioVisualComponent(MarioAIOptions marioAIOptions, MarioEnvironment mar
 
 	if (marioAIOptions.isShowingSearchedPath()) {
 		try{
-	    ObjectInputStream in = new ObjectInputStream(new FileInputStream("searchpath"));
+	    ObjectInputStream in = new ObjectInputStream(new FileInputStream("searchpath_"+marioAIOptions.getReplayFile()));
 	    searchedPath = (int[][])in.readObject();
 		}catch(Exception e){
 	    e.printStackTrace();
