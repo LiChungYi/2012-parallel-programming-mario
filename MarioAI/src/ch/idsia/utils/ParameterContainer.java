@@ -108,7 +108,9 @@ private static final String[] allowed = new String[]{
         "-ice", //ice
         "-ex", //exitX
         "-ey", //exitY
-		"-showSearchPath" //show search path file in "searchpath"
+		"-showSearchPath", //show search path file in "searchpath"
+		"-rf", //replay file
+		"-nth" //numthreads
 };
 
 public ParameterContainer()
@@ -295,6 +297,8 @@ public static void InitDefaults()
         defaultOptionsHashMap.put("-ex", "0"); //exit y
         defaultOptionsHashMap.put("-punj", "off"); //exit y
 		defaultOptionsHashMap.put("-showSearchPath", "off");
+		defaultOptionsHashMap.put("-nth", "4");
+		defaultOptionsHashMap.put("-rf", "output");
     }
 }
 
