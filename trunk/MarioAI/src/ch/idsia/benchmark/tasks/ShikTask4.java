@@ -22,6 +22,23 @@ import java.util.Random;
 
 public class ShikTask4 implements Task
 {
+int[][] searchPath;
+	void dumpSearchPath(){
+
+	try{
+		FileOutputStream fos = new FileOutputStream("searchpath");
+		ObjectOutputStream oos = new ObjectOutputStream(fos);
+		oos.writeObject(searchPath);
+		oos.flush();
+		oos.close();
+		System.err.println("Dump Search Path OK!");
+	}
+	catch(Exception e){
+		e.printStackTrace();
+	}
+	}
+
+
 protected Environment environment;
 private Agent agent;
 protected MarioAIOptions options;
@@ -167,7 +184,32 @@ private boolean dfs(int lv, Environment env){
 					actionID += 1;
 				}
 				acts.add(candidateActions[actionID]);
+
+
+				// add
+				int lastXint = (int)nextEnv.getMarioFloatPos()[0], lastYint = (int)nextEnv.getMarioFloatPos()[1];
+				//
 				nextEnv.tick();
+				// add search path
+				int nxtXint = (int)nextEnv.getMarioFloatPos()[0];
+				int nxtYint = (int)nextEnv.getMarioFloatPos()[1];
+				if (lastXint >= 0 && lastYint >= 0) {
+					int xdif = nxtXint - lastXint; xdif = xdif>0? xdif: -xdif;
+					int ydif = nxtYint - lastYint; ydif = ydif>0? ydif: -ydif;
+					float lim = (xdif>ydif? xdif: ydif), ratio = 1f/lim;
+					for(float s = ratio; s <= 1.0; s+= ratio) {
+						int xx = (int)(lastXint + (nxtXint-lastXint)*s);
+						int yy = (int)(lastYint + (nxtYint-lastYint)*s);
+						if (xx < searchPath.length && xx >= 0 && yy < searchPath[0].length && yy >= 0) {
+							int v = 0 + (((searchPath[xx][yy]&255)+1)&255);
+							searchPath[xx][yy] = v;
+						}
+					}
+				}
+				lastXint = nxtXint; lastYint = nxtYint;
+				//
+
+
 				nextEnv.performAction(candidateActions[actionID]);
 				if ( nextEnv.getMarioStatus() == Mario.STATUS_DEAD ) bye = true;
 				if ( nextEnv.getEvaluationInfo().marioMode != 2 ) bye = true;
@@ -194,7 +236,16 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
     for (int r = 0; r < repetitionsOfSingleEpisode; ++r)
     {
         this.reset();
+
+		searchPath = new int[4096][256];
+		for (int i = 0; i < 4096; i++)
+			for(int j=0;j<256;j++)
+				searchPath[i][j] = 0;
+
 		dfs(0,copy(environment));
+		dumpSearchPath();
+
+
         //replay
         if(vis) {
 			options.setVisualization(vis);
