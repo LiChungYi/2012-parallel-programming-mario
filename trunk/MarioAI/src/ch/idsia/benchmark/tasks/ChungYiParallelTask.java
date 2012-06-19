@@ -63,7 +63,7 @@ public class ChungYiParallelTask implements Task{
 	void dumpSearchPath(){
 
 	try{
-		FileOutputStream fos = new FileOutputStream("searchpath");
+		FileOutputStream fos = new FileOutputStream("searchpath_"+options.getReplayFile());
 		ObjectOutputStream oos = new ObjectOutputStream(fos);
 		oos.writeObject(searchPath);
 		oos.flush();
