@@ -363,7 +363,7 @@ public boolean runSingleEpisode(final int repetitionsOfSingleEpisode)
     			}else{
                 	System.err.println("QQ");
                 	try{
-                        FileOutputStream fos = new FileOutputStream("output");
+                        FileOutputStream fos = new FileOutputStream(options.getReplayFile());
                         ObjectOutputStream oos = new ObjectOutputStream(fos);
                         oos.writeObject(new ArrayList<boolean[]>(trace));
                         oos.flush();
