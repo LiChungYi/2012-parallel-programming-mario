@@ -108,14 +108,14 @@ boolean checkSolvable( Environment env ) {
 			else levelScene[j][i] = 0;
 		}
 	}
-	/*
+/*
 	for ( int i=0; i<levelScene.length; i++ ) {
 		for ( int j=0; j<levelScene[i].length; j++ ) {
 			System.err.printf("%3d ",(int)levelScene[i][j]);
 		}
 		System.err.printf("\n");
 	}
-	*/
+*/
 	return levelScene[mx][my]==0;
 }
 private boolean dfs(int lv, Environment env){
