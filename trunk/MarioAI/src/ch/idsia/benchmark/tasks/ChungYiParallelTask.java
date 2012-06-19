@@ -261,7 +261,7 @@ void dumpPath(Vector<boolean[]> surePathGivenEnvironment){
 		trace.add(surePathGivenEnvironment.get(i));
 
 	try{
-		FileOutputStream fos = new FileOutputStream("output");
+		FileOutputStream fos = new FileOutputStream(options.getReplayFile());
 		ObjectOutputStream oos = new ObjectOutputStream(fos);
 		oos.writeObject(trace);
 		oos.flush();
