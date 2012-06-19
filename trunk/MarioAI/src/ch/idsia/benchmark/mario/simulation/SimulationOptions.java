@@ -518,4 +518,14 @@ public boolean isShowingSearchedPath()
 	return b(getParameterValue("-showSearchPath"));
 }
 
+public int getNumThreads()
+{
+	return i(getParameterValue("-nth"));
+}
+
+public String getReplayFile()
+{
+	return getParameterValue("-rf");
+}
+
 }

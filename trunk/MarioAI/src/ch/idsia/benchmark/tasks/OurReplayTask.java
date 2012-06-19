@@ -60,12 +60,13 @@ private Agent agent;
 protected MarioAIOptions options;
 private String name = getClass().getSimpleName();
 private EvaluationInfo evaluationInfo;
-
+private String mOutputFileName;
 private Vector<StatisticalSummary> statistics = new Vector<StatisticalSummary>();
 
 public OurReplayTask(MarioAIOptions marioAIOptions)
 {
 	environment = new MarioEnvironment();
+	mOutputFileName = marioAIOptions.getReplayFile();
     this.setOptionsAndReset(marioAIOptions);
 }
 
@@ -115,7 +116,7 @@ public void doEpisodes(int amount, boolean verbose, final int repetitionsOfSingl
     environment.reset(options);
     environment.tick();
     try{
-	    ObjectInputStream in = new ObjectInputStream(new FileInputStream("output"));
+	    ObjectInputStream in = new ObjectInputStream(new FileInputStream(mOutputFileName));
 	    trace = (List<boolean[]>)in.readObject();
 	    for(int i=0;i<trace.size() && !environment.isLevelFinished();++i){
 		    environment.performAction(trace.get(i));
